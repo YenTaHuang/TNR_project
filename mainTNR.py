@@ -1,6 +1,6 @@
 # mainTNR
 # ------------------------
-# by Glen Evenbly
+# translated from Glen Evenbly's Julia code
 #
 # Script file for initializing a partition function (here the classical
 # Ising model) before passing to a Tensor Network Renormalization (TNR)

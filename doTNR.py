@@ -1,5 +1,9 @@
+# translated from Glen Evenbly's Julia code
+
 import numpy as np
 import time
+
+
 
 def conj(x):
     return np.conjugate(x)
