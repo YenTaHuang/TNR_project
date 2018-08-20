@@ -1,7 +1,10 @@
+#!/usr/bin/env python3
+
 # translated from Glen Evenbly's Julia code
 
 import numpy as np
 import time
+
 
 
 
