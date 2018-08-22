@@ -24,13 +24,13 @@ def main():
     chiH = 6
     chiV = 6
 
-    relTemp = 0.5 # temp relative to the crit temp, in [0,inf]
+    relTemp = 0.995 # temp relative to the crit temp, in [0,inf]
     numlevels = 12 # number of coarse-grainings
 
     O_dtol = 1e-10
     O_disiter = 2000
     O_miniter = 200
-    O_dispon = True
+    O_dispon = False
     O_convtol = 0.01
     O_disweight = 0
 
