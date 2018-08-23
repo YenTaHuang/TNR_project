@@ -5,8 +5,11 @@
 import numpy as np
 import time
 
-
-
+# define Pauli matrices
+sX = np.array([[0,1], [1,0]])
+sY = np.array([[0,-1j], [1j,0]])
+sZ = np.array([[1,0], [0,1]])
+sI = np.eye(2);
 
 def conj(x):
     return np.conjugate(x)
@@ -116,6 +119,7 @@ def doTNR(A, allchi, dtol = 1e-10, disiter = 2000, miniter = 100, dispon = True,
     Cmod = np.einsum(C,[1,2,3,4],s,[1,21],s,[2,22],s,[3,23],s,[4,24],order='C',optimize=True)
     Cnorm = np.einsum(Cmod,[1,2,3,4],Cmod,[1,2,3,4],optimize=True)/np.einsum(C,[1,2,3,4],C,[1,2,3,4],order='C',optimize=True)
     s = s/(Cnorm**(1/8))
+
     #print("SP2err : ",SP2err)
 
     circle_4 = np.einsum(y,[1,2,6],s,[5,6],qA,[3,4,5])
