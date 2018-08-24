@@ -57,7 +57,7 @@ def doTNR(A, allchi, dtol = 1e-10, disiter = 2000, miniter = 100, dispon = True,
     chiV = min(allchi[4],chiU**2)
     ##### determine 'q' isometry
     qenv = np.einsum(A,[21,22,11,12],A,[7,8,11,9],A,[5,12,1,2],A,[5,9,3,4],A,[23,24,13,14],A,[7,8,13,10],A,[6,14,1,2],A,[6,10,3,4],order='C',optimize=True).reshape((chiHI*chiVI,chiHI*chiVI))
-    dtemp, qtemp = eigCut(qenv, chimax = chiM, dtol = dtol);
+    dtemp, qtemp = eigCut(qenv, chimax = chiM, dtol = dtol)
     q = qtemp.reshape((chiHI,chiVI,qtemp.shape[1]))
     chiM = q.shape[2]
     chiS = min(chiS,chiM)

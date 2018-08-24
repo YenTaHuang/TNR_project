@@ -7,14 +7,14 @@ chiU = 4
 chiH = 6
 chiV = 6
 
-numlevels = 20 # number of coarse-grainings
+numlevels = 40 # number of coarse-grainings
 
 time_start =time.asctime()
 
 path1 = "./T_magnitization_scan_"+str(time_start)+".txt"
 file1 = open(path1,'w')
-
-relTemp_list = [0.4 + 0.05*n for n in range(10)] + [0.9 + 0.002*n for n in range(100)] + [1.1 + 0.05*n for n in range(12)]
+#relTemp_list = [1.1 + 0.05*n for n in range(12)]
+relTemp_list = [0.4 + 0.05*n for n in range(10)] + [0.9 + 0.001*n for n in range(200)] + [1.1 + 0.05*n for n in range(12)]
 
 #relTemp_list = [0.5,0.6,0.7,0.8,0.9,0.92,0.94,0.96,0.98,1,1.02,1.04,1.06,1.08,1.1,1.2,1.3,1.4,1.5,1.6]
 #relTemp_list = [0.6 + 0.1*n for n in range(3)]

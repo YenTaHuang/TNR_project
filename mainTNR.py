@@ -16,7 +16,7 @@ from doTNR import *
 # a binary MERA defined from disentanglers 'upC' and isometries 'wC' for
 # the ground state of the transverse field quantum Ising model.
 
-chiM = 8
+chiM = 6
 chiS = 4
 chiU = 4
 chiH = 6
@@ -24,8 +24,8 @@ chiV = 6
 
 allchi = [chiM,chiS,chiU,chiH,chiV]
 
-relTemp = 1.6 # temp relative to the crit temp, in [0,inf]
-numlevels = 20 # number of coarse-grainings
+relTemp = 0.995 # temp relative to the crit temp, in [0,inf]
+numlevels = 12 # number of coarse-grainings
 
 O_dtol = 1e-10
 O_disiter = 2000
@@ -58,8 +58,6 @@ def mainTNR(relTemp,allchi,numlevels, dtol = 1e-10, disiter = 2000, miniter = 10
     Anorm.append(np.linalg.norm(Atemp[:]))
     A = []
     A.append(Atemp/Anorm[0])
-
-    ###### Do iterations of TNR
     SPerrs = []
     qC = []
     sC = []
@@ -67,6 +65,9 @@ def mainTNR(relTemp,allchi,numlevels, dtol = 1e-10, disiter = 2000, miniter = 10
     yC = []
     vC = []
     wC = []
+
+    ###### Do iterations of TNR
+
 
     for k in range(numlevels):
         time1 = time.time()
@@ -85,22 +86,22 @@ def mainTNR(relTemp,allchi,numlevels, dtol = 1e-10, disiter = 2000, miniter = 10
         print("RGstep: ",k," , Truncation Errors:",SPerrs_new)
         print("time spent for this RGstep: ",time2-time1)
         print("shape of A:",A_new.shape)
-        # print("shape of q:",qC_new.shape)
-        # print("shape of s:",sC_new.shape)
-        # print("shape of u:",uC_new.shape)
-        # print("shape of y:",yC_new.shape)
-        # print("shape of v:",vC_new.shape)
-        # print("shape of w:",wC_new.shape)
+        print("shape of q:",qC_new.shape)
+        print("shape of s:",sC_new.shape)
+        print("shape of u:",uC_new.shape)
+        print("shape of y:",yC_new.shape)
+        print("shape of v:",vC_new.shape)
+        print("shape of w:",wC_new.shape)
 
 
     gaugeX = np.moveaxis(np.eye(4).reshape(2,2,2,2),[0,1,2,3],[1,0,2,3]).reshape(4,4)
     upC = []
-    upC.append(np.einsum(uC[0],[21,1,23,24],gaugeX,[1,22]))
+    upC.append(np.einsum(uC[0],[21,1,23,24],gaugeX,[1,22],order='C',optimize=True))
 
     for k in range(1,numlevels):
-        U, S, Vh = np.linalg.svd(np.einsum(wC[k-1],[1,2,21],wC[k-1],[2,1,22]))
+        U, S, Vh = np.linalg.svd(np.einsum(wC[k-1],[1,2,21],wC[k-1],[2,1,22],order='C',optimize=True))
         gaugeX = U@Vh
-        upC.append(np.einsum(uC[k],[21,1,23,24],gaugeX,[1,22]))
+        upC.append(np.einsum(uC[k],[21,1,23,24],gaugeX,[1,22],order='C',optimize=True))
 
     ##### Change gauge on disentanglers 'u'
     # gaugeX = reshape(permutedims(reshape(eye(4),2,2,2,2),[2,1,3,4]),4,4);
@@ -114,7 +115,7 @@ def mainTNR(relTemp,allchi,numlevels, dtol = 1e-10, disiter = 2000, miniter = 10
 
     sXcg = ((1/4)*(np.kron(np.eye(8),sX) + np.kron(np.eye(4),np.kron(sX,np.eye(2))) + np.kron(np.eye(2),np.kron(sX,np.eye(4))) + np.kron(sX,np.eye(8)))).reshape(4,4,4,4)
     for k in range(numlevels):
-        sXcg = np.einsum(sXcg,[3,4,1,2],upC[k],[1,2,6,9],upC[k],[3,4,7,10],wC[k],[5,6,21],wC[k],[9,8,22],wC[k],[5,7,23],wC[k],[10,8,24])
+        sXcg = np.einsum(sXcg,[3,4,1,2],upC[k],[1,2,6,9],upC[k],[3,4,7,10],wC[k],[5,6,21],wC[k],[9,8,22],wC[k],[5,7,23],wC[k],[10,8,24],order='C',optimize=True)
     w,v = np.linalg.eigh(sXcg.reshape(sXcg.shape[0]**2,sXcg.shape[2]**2))
     ExpectX = np.max(w)
 
