@@ -11,6 +11,7 @@
 # 'wC' for the ground state of the transverse field quantum Ising model.
 
 from doScInvTNR import *
+from doScEval import *
 
 ##### Set bond dimensions and options
 chiM = 12
@@ -19,12 +20,12 @@ chiU = 8
 chiH = 10
 chiV = 10
 
-numlevels = 20 # number of coarse-grainings
+numlevels = 7 # number of coarse-grainings
 
 O_dtol = 1e-10
 O_disiter = 2000
 O_miniter = 100
-O_dispon = True
+O_dispon = False
 O_convtol = 0.01
 O_midsteps = 20
 O_mixratio = 10
@@ -44,27 +45,28 @@ Xloc = (1/np.sqrt(2))*np.array([[1,1],[1,-1]])
 Ainit = np.einsum(Ainit,[1,2,3,4],Xloc,[1,21],Xloc,[2,22],Xloc,[3,23],Xloc,[4,24])
 Atemp = np.einsum(Ainit,[12,13,3,1],Ainit,[3,14,15,2],Ainit,[11,1,4,18],Ainit,[4,2,16,17]).reshape(4,4,4,4)
 Anorm = []
-Anorm.append(np.linalg.norm(Atemp[:]))
+Anorm.append(np.linalg.norm(Atemp))
 A = []
 A.append(Atemp/Anorm[0])
 
-Adiff = []
+Adiff = [None]
 
-SPerrs = []
-qC = []
-sC = []
-uC = []
-yC = []
-vC = []
-wC = []
-C = []
+SPerrs = [None]
+qC = [None]
+sC = [None]
+uC = [None]
+yC = [None]
+vC = [None]
+wC = [None]
+C = [None]
 
 ###### Do iterations of TNR
 for k in range(numlevels):
     time1 = time.time()
-    if k < 2:
+    if k < 1:
         sctype = 0
         A_new, C_new, qC_new, sC_new, uC_new, yC_new, vC_new, wC_new, Anorm_new, SPerrs_new =doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],[0],[0],[0],[0],[0],[0],[0],dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
+        Adiff_new = None
         A.append(A_new)
         C.append(C_new)
         qC.append(qC_new)
@@ -75,10 +77,9 @@ for k in range(numlevels):
         wC.append(wC_new)
         Anorm.append(Anorm_new)
         SPerrs.append(SPerrs_new)
-        Adiff_new = [0]
         Adiff.append(Adiff_new)
 
-    elif k == 2:
+    elif k == 1:
         sctype = 1
         A_new, C_new, qC_new, sC_new, uC_new, yC_new, vC_new, wC_new, Anorm_new, SPerrs_new =doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],[0],[0],[0],[0],[0],[0],[0],dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
         A.append(A_new)
@@ -111,3 +112,22 @@ for k in range(numlevels):
     print("RGstep: ",k," ,A_differ: ",Adiff_new," , Truncation Errors:",SPerrs_new)
     print("time spent for this RGstep: ",time2-time1)
     print("shape of A:",A_new.shape)
+
+###############################################
+
+print("Adiff: ",Adiff)
+sclev = Adiff.index(min(x for x in Adiff if x != None))
+print("sclev: ",sclev)
+
+
+chiK = 20
+time1 = time.time()
+w,v = doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK)
+time2 = time.time()
+print("Scaling dimension: ",np.sort(w))
+print("time spent for diagonalization: ",time2-time1)
+
+path1 = "./scaling_dim.txt"
+file1 = open(path,'w')
+file1.write(np.sort(w))
+file1.close()
