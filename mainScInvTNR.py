@@ -62,7 +62,7 @@ C = []
 ###### Do iterations of TNR
 for k in range(numlevels):
     time1 = time.time()
-    if k < 2:
+    if k < 1:
         sctype = 0
         A_new, C_new, qC_new, sC_new, uC_new, yC_new, vC_new, wC_new, Anorm_new, SPerrs_new =doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],[0],[0],[0],[0],[0],[0],[0],dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
         A.append(A_new)
@@ -78,7 +78,7 @@ for k in range(numlevels):
         Adiff_new = [0]
         Adiff.append(Adiff_new)
 
-    elif k == 2:
+    elif k == 1:
         sctype = 1
         A_new, C_new, qC_new, sC_new, uC_new, yC_new, vC_new, wC_new, Anorm_new, SPerrs_new =doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],[0],[0],[0],[0],[0],[0],[0],dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
         A.append(A_new)
