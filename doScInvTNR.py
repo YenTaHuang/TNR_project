@@ -169,6 +169,7 @@ def  doScInvTNR(A,allchi,Cold,qold,sold,uold,yold,vold,wold, dtol = 1e-10, disit
                 v = TensorUpdateSVD(venv,2)
             else:
                 wenv = np.einsum(circle,[21,22,15,16,8,7,5,4],v,[15,16,18],v,[5,4,10],w,[8,7,11],Amix,[10,23,18,11],order='C',optimize=True)
+                w = TensorUpdateSVD(wenv,2)
     else:
         venv = 0.5*((venv+np.moveaxis(venv,[0,1,2,3],[1,0,3,2])).reshape(chiHI**2,chiHI**2))
         dtemp, vtemp = eigCut(venv, chimax = chiH, dtol = dtol)
