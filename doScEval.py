@@ -2,8 +2,11 @@ import numpy as np
 import scipy
 from scipy.sparse.linalg import LinearOperator
 
+def ct(A):
+    return np.conjugate(np.transpose(A))
+
 def eigCut(rho, chimax = 100000, dtol = 1e-10):
-    w, v = np.linalg.eigh(rho)
+    w, v = np.linalg.eigh(0.5*(rho+ct(rho)))
     idx = w.argsort()[::-1]
     w = w[idx]
     v = v[:,idx]
@@ -54,12 +57,12 @@ def doScEval(Ax,qx,sx,yx,vx,wx,chiK):
     print("n: ",n)
 
     def logScaleSuper(psi):
-        return np.einsum(psi.reshape(chir,chig,chir,chig),[1,3,5,7],rT,[1,21,8,2],gT,[3,22,2,4],rT,[5,23,4,6],gT,[7,24,6,8]).reshape((chir*chig)**2)
+        return np.einsum(psi.reshape(chir,chig,chir,chig),[1,3,5,7],rT,[1,21,8,2],gT,[3,22,2,4],rT,[5,23,4,6],gT,[7,24,6,8],order='C',optimize=True).reshape((chir*chig)**2)
 
     Atemp = LinearOperator(((chir*chig)**2,(chir*chig)**2), matvec = logScaleSuper)
 
 
-    print("eig")
-    w = scipy.sparse.linalg.eigsh(Atemp, k=12, M=None, sigma=None, which='SM', v0=None, ncv=None, maxiter=300, tol=1e-5, return_eigenvectors=False, Minv=None, OPinv=None, mode='normal')
+    print("calculating eigs")
+    w = scipy.sparse.linalg.eigsh(Atemp, k=4, which='LM', maxiter=5, tol=1e-2, return_eigenvectors=False)
 
-    return w
+    return -np.log2(np.abs(w/w[0]))

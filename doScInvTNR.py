@@ -7,7 +7,7 @@ def TensorUpdateSVD(win,leftnum):
     return ct(U@Vh).reshape(ws)
 
 def eigCut(rho, chimax = 100000, dtol = 1e-10):
-    w, v = np.linalg.eigh(rho)
+    w, v = np.linalg.eigh(0.5*(rho+ct(rho)))
     idx = w.argsort()[::-1]
     w = w[idx]
     v = v[:,idx]
@@ -82,8 +82,8 @@ def  doScInvTNR(A,allchi,Cold,qold,sold,uold,yold,vold,wold, dtol = 1e-10, disit
         s = sold
     else:
         u = np.kron(np.eye(chiVI,chiU),np.eye(chiVI,chiU)).reshape(chiVI,chiVI,chiU,chiU)
-        y = q[:,:u.shape[2],:chiS];
-        s = np.eye(q.shape[2],chiS);
+        y = q[:,:u.shape[2],:chiS]
+        s = np.eye(q.shape[2],chiS)
 
     Cdub = np.einsum(C,[21,22,1,2],C,[23,24,1,2],order='C',optimize=True)
     sCenvD = np.moveaxis(Cdub,[0,1,2,3],[0,2,1,3])
@@ -117,7 +117,7 @@ def  doScInvTNR(A,allchi,Cold,qold,sold,uold,yold,vold,wold, dtol = 1e-10, disit
             Serrnew = np.abs(1 - (np.einsum(sCenvS,[1,2,3,4],snew,[1,2],snew,[3,4],order='C',optimize=True)**2)/(np.einsum(sCenvD,[1,2,3,4],snew@ct(snew),[1,2],snew@ct(snew),[3,4],order='C',optimize=True)*SP2exact))+ 1e-16
 
             if Serrnew <= Serrold:
-                s = snew/np.linalg.norm(snew[:]);
+                s = snew/np.linalg.norm(snew);
                 break
 
         if k > 50:
@@ -181,7 +181,7 @@ def  doScInvTNR(A,allchi,Cold,qold,sold,uold,yold,vold,wold, dtol = 1e-10, disit
     Atemp = np.einsum(v,[10,9,21],s,[7,19],qA,[6,9,7],qA,[6,10,8],s,[8,14],w,[17,18,22],y,[16,17,19],y,[16,18,20],v,[4,5,23],s,[1,20],qA,[3,4,1],qA,[3,5,2],s,[2,15],w,[13,12,24],y,[11,12,14],y,[11,13,15],order='C',optimize=True)
     Atemp = 0.5*(Atemp + np.moveaxis(Atemp,[0,1,2,3],[2,3,0,1]))
     SP3err = np.abs((SP3exact - np.einsum(Atemp,[1,2,3,4],Atemp,[1,2,3,4],order='C',optimize=True))/SP3exact) + 1e-16
-    Anorm = np.linalg.norm(Atemp[:])
+    Anorm = np.linalg.norm(Atemp)
     Aout = Atemp/Anorm
 
     SPerrs = [SP1err,SP2err,SP3err]

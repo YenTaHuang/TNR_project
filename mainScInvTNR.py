@@ -20,7 +20,13 @@ chiU = 8
 chiH = 10
 chiV = 10
 
-numlevels = 7 # number of coarse-grainings
+# chiM = 5
+# chiS = 2
+# chiU = 3
+# chiH = 4
+# chiV = 4
+
+numlevels = 8 # number of coarse-grainings
 
 O_dtol = 1e-10
 O_disiter = 2000
