@@ -14,7 +14,9 @@ from doScInvTNR import *
 from doScEval import *
 import matplotlib.pyplot as plt
 
+import time
 
+time_start = time.time()
 
 ##### Set bond dimensions and options
 chiM = 12
@@ -34,7 +36,7 @@ numlevels = 8 # number of coarse-grainings
 O_dtol = 1e-10
 O_disiter = 2000
 O_miniter = 100
-O_dispon = False
+O_dispon = True
 O_convtol = 0.01
 O_midsteps = 20
 O_mixratio = 10
@@ -105,7 +107,7 @@ for k in range(numlevels):
     else:
         sctype = 2
         A_new, C_new, qC_new, sC_new, uC_new, yC_new, vC_new, wC_new, Anorm_new, SPerrs_new =doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],C[-1],qC[-1],sC[-1],uC[-1],yC[-1],vC[-1],wC[-1],dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
-        Adiff_new = np.linalg.norm((A[-2] - A[-1]).reshape(chiH*chiV,chiH*chiV))
+
         A.append(A_new)
         C.append(C_new)
         qC.append(qC_new)
@@ -116,6 +118,8 @@ for k in range(numlevels):
         wC.append(wC_new)
         Anorm.append(Anorm_new)
         SPerrs.append(SPerrs_new)
+        
+        Adiff_new = np.linalg.norm((A[-2] - A[-1]).reshape(chiH*chiV,chiH*chiV))
         Adiff.append(Adiff_new)
     time2 = time.time()
     print('\x1b[6;30;42m'+"#############################################"+ '\x1b[0m')
@@ -141,6 +145,10 @@ spec = spec - spec[0]
 
 print("Scaling dimension: ",spec)
 print("time spent for diagonalization: ",time2-time1)
+
+time_end = time.time()
+
+print("Total time for the whole calculation: ",time_end-time_start)
 
 path1 = "./scaling_dim.txt"
 file1 = open(path1,'w')
