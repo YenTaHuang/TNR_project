@@ -6,7 +6,7 @@ from doScInvTNR import eigCut
 
 ##### Define action of scaling superoperator on a local operator
 
-def doScEval(Ax,qx,sx,yx,vx,wx,chiK,N_level=100):
+def doScEval(Ax,qx,sx,yx,vx,wx,chiK,N_level):
     # function doScEval(Ax,qx,sx,yx,vx,wx,chiK,numeval)
     # ------------------------
     # by Glen Evenbly, v1.0 (2018).
