@@ -84,3 +84,10 @@ for k in range(numlevels):
     print("RGstep: %d ,A_differ: %.6g , Truncation Errors: %.6g, %.6g, %.6g" %(k, Adiff[k],*tuple(SPerrs[k])))
     print("time spent for this RGstep: %.6g"%(time2-time1,))
     print("shape of A:",A[k+1].shape)
+
+from doScEval import doScEval
+print("Adiff: ",Adiff)
+sclev = np.argmin(Adiff)
+print("sclev: ",sclev)
+chiK=20
+doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK)
