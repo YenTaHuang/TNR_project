@@ -11,7 +11,13 @@
 # 'wC' for the ground state of the transverse field quantum Ising model.
 
 from doScInvTNR import *
+
 import numpy as np
+import matplotlib.pyplot as plt
+import time
+
+time_start = time.time()
+
 
 ##### Set bond dimensions and options
 chiM = 12
@@ -44,6 +50,7 @@ Ainit = np.einsum(Jtemp,[21,8,1],Jtemp,[22,2,3],Jtemp,[23,4,5],Jtemp,[24,6,7],Et
 Xloc = (1/np.sqrt(2))*np.array([[1,1],[1,-1]])
 Ainit = np.einsum(Ainit,[1,2,3,4],Xloc,[1,21],Xloc,[2,22],Xloc,[3,23],Xloc,[4,24])
 Atemp = np.einsum(Ainit,[12,13,3,1],Ainit,[3,14,15,2],Ainit,[11,1,4,18],Ainit,[4,2,16,17]).reshape(4,4,4,4)
+
 Anorm = [0]*(numlevels+1)
 Anorm[0]=np.linalg.norm(Atemp)
 A = [np.nan]*(numlevels+1)
@@ -90,4 +97,27 @@ print("Adiff: ",Adiff)
 sclev = np.argmin(Adiff)
 print("sclev: ",sclev)
 chiK=20
-scDims=doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK)
+N_level = 20
+time1 = time.time()
+scDims=doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK,N_level)
+time2 = time.time()
+
+spec = np.sort(scDims)
+spec = spec - spec[0]
+
+print("Scaling dimension: ",spec)
+print("time spent for diagonalization: ",time2-time1)
+
+time_end = time.time()
+
+print("Total time for the whole calculation: ",time_end-time_start)
+
+path1 = "./scaling_dim.txt"
+file1 = open(path1,'w')
+file1.write(str(spec.tolist()).replace("e","*^").replace("[","{").replace("]","}"))
+file1.close()
+
+plt.scatter(np.arange(N_level),spec)
+
+plt.savefig('scaling_dim.pdf')
+plt.show()

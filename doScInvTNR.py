@@ -7,7 +7,7 @@ def TensorUpdateSVD(win,leftnum):
     return ct(U@Vh).reshape(ws)
 
 def eigCut(rho, chimax = 100000, dtol = 1e-10):
-    w, v = np.linalg.eigh(rho)
+    w, v = np.linalg.eigh(0.5*(rho+ct(rho)))
     idx = w.argsort()[::-1]
     w = w[idx]
     v = v[:,idx]
@@ -83,8 +83,8 @@ def  doScInvTNR(A,allchi,Cold,qold,sold,uold,yold,vold,wold, dtol = 1e-10, disit
         s = sold
     else:
         u = np.kron(np.eye(chiVI,chiU),np.eye(chiVI,chiU)).reshape(chiVI,chiVI,chiU,chiU)
-        y = q[:,:u.shape[2],:chiS];
-        s = np.eye(q.shape[2],chiS);
+        y = q[:,:u.shape[2],:chiS]
+        s = np.eye(q.shape[2],chiS)
 
     Cdub = np.einsum(C,[21,22,1,2],C,[23,24,1,2])
     sCenvD = np.moveaxis(Cdub,[0,1,2,3],[0,2,1,3])
@@ -118,7 +118,7 @@ def  doScInvTNR(A,allchi,Cold,qold,sold,uold,yold,vold,wold, dtol = 1e-10, disit
             Serrnew = np.abs(1 - (np.einsum(sCenvS,[1,2,3,4],snew,[1,2],snew,[3,4])**2)/(np.einsum(sCenvD,[1,2,3,4],snew@ct(snew),[1,2],snew@ct(snew),[3,4])*SP2exact))+ 1e-16
 
             if Serrnew <= Serrold:
-                s = snew/np.linalg.norm(snew[:]);
+                s = snew/np.linalg.norm(snew);
                 break
 
         if k > 50:
@@ -161,9 +161,7 @@ def  doScInvTNR(A,allchi,Cold,qold,sold,uold,yold,vold,wold, dtol = 1e-10, disit
                 venv = np.einsum(w,[2,3,11],y,[1,2,9],y,[1,3,20],v,[8,7,10],s,[4,9],qA,[6,7,4],qA,[6,8,5],s,[5,15],w,[14,13,16],y,[12,13,15],y,[12,14,21],s,[17,20],qA,[19,22,17],qA,[19,23,18],s,[18,21],Amix,[10,11,24,16])
                 v = TensorUpdateSVD(venv,2)
             else:
-                wenv = np.einsum(y,[19,23,20],y,[19,24,21],v,[5,4,10],s,[1,20],qA,[3,4,1],
-                    qA,[3,5,2],s,[2,9],w,[8,7,11],y,[6,7,9],y,[6,8,17],v,[15,16,18],s,[12,21],
-                    qA,[14,15,12],qA,[14,16,13],s,[13,17],Amix,[10,25,18,11])
+                wenv = np.einsum(y,[19,23,20],y,[19,24,21],v,[5,4,10],s,[1,20],qA,[3,4,1],qA,[3,5,2],s,[2,9],w,[8,7,11],y,[6,7,9],y,[6,8,17],v,[15,16,18],s,[12,21],qA,[14,15,12],qA,[14,16,13],s,[13,17],Amix,[10,25,18,11])
                 w = TensorUpdateSVD(wenv,2)
     else:
         venv = 0.5*((venv+venv.transpose(1,0,3,2)).reshape(chiHI**2,chiHI**2))
