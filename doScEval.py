@@ -45,20 +45,26 @@ def doScEval(Ax,qx,sx,yx,vx,wx,chiK):
     print("gT.shape: ",gT.shape)
     print("n: ",n)
 
-    #export to h5 file
-    import h5py
-    with h5py.File("rT.h5") as f:
-        f.create_dataset('rT',data = rT)
-    with h5py.File("gT.h5") as f:
-        f.create_dataset('gT',data = gT)
+    # #export to h5 file
+    # import h5py
+    # with h5py.File("rT.h5") as f:
+    #     f.create_dataset('rT',data = rT)
+    # with h5py.File("gT.h5") as f:
+    #     f.create_dataset('gT',data = gT)
 
-    # def logScaleSuper(psi):
-    #     return np.einsum(psi.reshape(chir,chig,chir,chig),[1,3,5,7],rT,[1,21,8,2],gT,[3,22,2,4],rT,[5,23,4,6],gT,[7,24,6,8]).reshape((chir*chig)**2)
+    def logScaleSuper(v):
+        v_temp = v.reshape(chir,chig,chir,chig)
+        temp1 = np.einsum(rT,[1,2,3,7],gT,[4,5,7,6])
+        temp2 = np.einsum(v_temp,[1,2,14,15],temp1,[1,11,16,2,12,13])
+        return np.einsum(temp1,[2,23,1,3,24,4],temp2,[21,22,1,2,3,4]).reshape(n)
 
-    # Atemp = LinearOperator(((chir*chig)**2,(chir*chig)**2), matvec = logScaleSuper)
+    Atemp = LinearOperator((n,n), matvec = logScaleSuper, dtype='float64')
 
+    N_level=100
+    print("calculating eigs")
 
-    # print("eig")
-    # w = scipy.sparse.linalg.eigsh(Atemp, k=12, M=None, sigma=None, which='SM', v0=None, ncv=None, maxiter=300, tol=1e-5, return_eigenvectors=False, Minv=None, OPinv=None, mode='normal')
-
-    # return w
+    w = scipy.sparse.linalg.eigs(Atemp, k=N_level, which='LM', maxiter=200, tol=1e-5, return_eigenvectors=False)
+    w=w[::-1]
+    spec = -np.log2(np.abs(w/w[0]))
+    
+    return spec

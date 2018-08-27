@@ -146,7 +146,7 @@ def doTNR(A, allchi, dtol = 1e-10, disiter = 2000, miniter = 100, dispon = True,
     vqAsqAs=np.einsum(v,[6,5,11],qAs,[4,6,13],qAs,[4,5,12])
     Atemp = np.einsum(vqAsqAs,[11,7,9],wyy,[12,9,10],vqAsqAs,[13,10,8],wyy,[14,8,7])
 
-    #Atemp = np.einsum(v,[6,5,11],qAs,[4,5,9],qAs,[4,6,7],wyy,[12,9,10],v,[2,3,13],qAs,[1,2,10],qAs,[1,3,8],wyy,[14,8,7])
+    #Atemp = np.einsum(v,[6,5,11],qAs,[4,6,7],qAs,[4,5,9],wyy,[12,9,10],v,[2,3,13],qAs,[1,2,10],qAs,[1,3,8],wyy,[14,8,7])
     #Atemp = np.einsum(v,[10,9,21],s,[7,19],qA,[6,9,7],qA,[6,10,8],s,[8,14],w,[17,18,22],y,[16,17,19],y,[16,18,20],v,[4,5,23],s,[1,20],qA,[3,4,1],qA,[3,5,2],s,[2,15],w,[13,12,24],y,[11,12,14],y,[11,13,15])
 
     Anorm = np.linalg.norm(Atemp)

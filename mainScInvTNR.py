@@ -90,4 +90,4 @@ print("Adiff: ",Adiff)
 sclev = np.argmin(Adiff)
 print("sclev: ",sclev)
 chiK=20
-doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK)
+scDims=doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK)
