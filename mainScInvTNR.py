@@ -11,12 +11,13 @@
 # 'wC' for the ground state of the transverse field quantum Ising model.
 
 from doScInvTNR import *
-from doScEval import *
-import matplotlib.pyplot as plt
 
+import numpy as np
+import matplotlib.pyplot as plt
 import time
 
 time_start = time.time()
+
 
 ##### Set bond dimensions and options
 chiM = 12
@@ -25,13 +26,7 @@ chiU = 8
 chiH = 10
 chiV = 10
 
-# chiM = 5
-# chiS = 2
-# chiU = 3
-# chiH = 4
-# chiV = 4
-
-numlevels = 8 # number of coarse-grainings
+numlevels = 10 # number of coarse-grainings
 
 O_dtol = 1e-10
 O_disiter = 2000
@@ -55,92 +50,59 @@ Ainit = np.einsum(Jtemp,[21,8,1],Jtemp,[22,2,3],Jtemp,[23,4,5],Jtemp,[24,6,7],Et
 Xloc = (1/np.sqrt(2))*np.array([[1,1],[1,-1]])
 Ainit = np.einsum(Ainit,[1,2,3,4],Xloc,[1,21],Xloc,[2,22],Xloc,[3,23],Xloc,[4,24])
 Atemp = np.einsum(Ainit,[12,13,3,1],Ainit,[3,14,15,2],Ainit,[11,1,4,18],Ainit,[4,2,16,17]).reshape(4,4,4,4)
-Anorm = []
-Anorm.append(np.linalg.norm(Atemp))
-A = []
-A.append(Atemp/Anorm[0])
 
-Adiff = [None]
+Anorm = [0]*(numlevels+1)
+Anorm[0]=np.linalg.norm(Atemp)
+A = [np.nan]*(numlevels+1)
+A[0]=Atemp/Anorm[0]
 
-SPerrs = [None]
-qC = [None]
-sC = [None]
-uC = [None]
-yC = [None]
-vC = [None]
-wC = [None]
-C = [None]
+Adiff = [1]*numlevels
+
+SPerrs = [0]*numlevels
+qC = [np.nan]*numlevels
+sC = [np.nan]*numlevels
+uC = [np.nan]*numlevels
+yC = [np.nan]*numlevels
+vC = [np.nan]*numlevels
+wC = [np.nan]*numlevels
+C = [np.nan]*numlevels
 
 ###### Do iterations of TNR
 for k in range(numlevels):
     time1 = time.time()
     if k < 1:
         sctype = 0
-        A_new, C_new, qC_new, sC_new, uC_new, yC_new, vC_new, wC_new, Anorm_new, SPerrs_new =doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],[0],[0],[0],[0],[0],[0],[0],dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
-        Adiff_new = None
-        A.append(A_new)
-        C.append(C_new)
-        qC.append(qC_new)
-        sC.append(sC_new)
-        uC.append(uC_new)
-        yC.append(yC_new)
-        vC.append(vC_new)
-        wC.append(wC_new)
-        Anorm.append(Anorm_new)
-        SPerrs.append(SPerrs_new)
-        Adiff.append(Adiff_new)
-
+        A[k+1], C[k], qC[k], sC[k], uC[k], yC[k], vC[k], wC[k], Anorm[k+1], SPerrs[k] = \
+        doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],[0],[0],[0],[0],[0],[0],[0],
+                   dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
     elif k == 1:
         sctype = 1
-        A_new, C_new, qC_new, sC_new, uC_new, yC_new, vC_new, wC_new, Anorm_new, SPerrs_new =doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],[0],[0],[0],[0],[0],[0],[0],dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
-        A.append(A_new)
-        C.append(C_new)
-        qC.append(qC_new)
-        sC.append(sC_new)
-        uC.append(uC_new)
-        yC.append(yC_new)
-        vC.append(vC_new)
-        wC.append(wC_new)
-        Anorm.append(Anorm_new)
-        SPerrs.append(SPerrs_new)
-        Adiff.append(np.linalg.norm((A[-2] - A[-1]).reshape(chiH*chiV,chiH*chiV)))
+        A[k+1], C[k], qC[k], sC[k], uC[k], yC[k], vC[k], wC[k], Anorm[k+1], SPerrs[k] = \
+        doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],[0],[0],[0],[0],[0],[0],[0],
+                   dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
+        Adiff[k] = np.linalg.norm((A[k+1] - A[k]))
     else:
         sctype = 2
-        A_new, C_new, qC_new, sC_new, uC_new, yC_new, vC_new, wC_new, Anorm_new, SPerrs_new =doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],C[-1],qC[-1],sC[-1],uC[-1],yC[-1],vC[-1],wC[-1],dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
-
-        A.append(A_new)
-        C.append(C_new)
-        qC.append(qC_new)
-        sC.append(sC_new)
-        uC.append(uC_new)
-        yC.append(yC_new)
-        vC.append(vC_new)
-        wC.append(wC_new)
-        Anorm.append(Anorm_new)
-        SPerrs.append(SPerrs_new)
-        
-        Adiff_new = np.linalg.norm((A[-2] - A[-1]).reshape(chiH*chiV,chiH*chiV))
-        Adiff.append(Adiff_new)
+        A[k+1], C[k], qC[k], sC[k], uC[k], yC[k], vC[k], wC[k], Anorm[k+1], SPerrs[k] = \
+        doScInvTNR(A[k],[chiM,chiS,chiU,chiH,chiV],C[k-1],qC[k-1],sC[k-1],uC[k-1],yC[k-1],vC[k-1],wC[k-1],
+                   dtol = O_dtol, disiter = O_disiter, miniter = O_miniter, dispon = O_dispon, convtol = O_convtol, mixratio = O_mixratio, midsteps = O_midsteps, sctype = sctype)
+        Adiff[k] = np.linalg.norm((A[k+1] - A[k]))
     time2 = time.time()
-    print('\x1b[6;30;42m'+"#############################################"+ '\x1b[0m')
-    print("RGstep: ",k," ,A_differ: ",Adiff_new," , Truncation Errors:",SPerrs_new)
-    print("time spent for this RGstep: ",time2-time1)
-    print("shape of A:",A_new.shape)
+    print("RGstep: %d ,A_differ: %.6g , Truncation Errors: %.6g, %.6g, %.6g" %(k, Adiff[k],*tuple(SPerrs[k])))
+    print("time spent for this RGstep: %.6g"%(time2-time1,))
+    print("shape of A:",A[k+1].shape)
 
-###############################################
-
+from doScEval import doScEval
 print("Adiff: ",Adiff)
-sclev = Adiff.index(min(x for x in Adiff if x != None))
+sclev = np.argmin(Adiff)
 print("sclev: ",sclev)
-
-
-chiK = 20
+chiK=20
 N_level = 20
 time1 = time.time()
-w = doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK,N_level)
+scDims=doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK,N_level)
 time2 = time.time()
 
-spec = np.sort(w)
+spec = np.sort(scDims)
 spec = spec - spec[0]
 
 print("Scaling dimension: ",spec)
