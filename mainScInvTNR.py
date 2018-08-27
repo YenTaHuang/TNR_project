@@ -12,6 +12,9 @@
 
 from doScInvTNR import *
 from doScEval import *
+import matplotlib.pyplot as plt
+
+
 
 ##### Set bond dimensions and options
 chiM = 12
@@ -31,7 +34,7 @@ numlevels = 8 # number of coarse-grainings
 O_dtol = 1e-10
 O_disiter = 2000
 O_miniter = 100
-O_dispon = True
+O_dispon = False
 O_convtol = 0.01
 O_midsteps = 20
 O_mixratio = 10
@@ -115,6 +118,7 @@ for k in range(numlevels):
         SPerrs.append(SPerrs_new)
         Adiff.append(Adiff_new)
     time2 = time.time()
+    print('\x1b[6;30;42m'+"#############################################"+ '\x1b[0m')
     print("RGstep: ",k," ,A_differ: ",Adiff_new," , Truncation Errors:",SPerrs_new)
     print("time spent for this RGstep: ",time2-time1)
     print("shape of A:",A_new.shape)
@@ -127,13 +131,23 @@ print("sclev: ",sclev)
 
 
 chiK = 20
+N_level = 20
 time1 = time.time()
-w,v = doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK)
+w = doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK,N_level)
 time2 = time.time()
-print("Scaling dimension: ",np.sort(w))
+
+spec = np.sort(w)
+spec = spec - spec[0]
+
+print("Scaling dimension: ",spec)
 print("time spent for diagonalization: ",time2-time1)
 
 path1 = "./scaling_dim.txt"
-file1 = open(path,'w')
-file1.write(np.sort(w))
+file1 = open(path1,'w')
+file1.write(str(spec.tolist()).replace("e","*^").replace("[","{").replace("]","}"))
 file1.close()
+
+plt.scatter(np.arange(N_level),spec)
+
+plt.savefig('scaling_dim.pdf')
+plt.show()

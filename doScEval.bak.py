@@ -13,29 +13,15 @@ def eigCut(rho, chimax = 100000, dtol = 1e-10):
     chitemp = min(sum(w>dtol),chimax)
     return w[:chitemp],v[:,:chitemp]
 
-class SimpleLinOp:
-    def __init__(self, n, f):
-        self.dtype = 'float'
-        self.shape = (n,n)
-    def matvec(self,x):
-        return f(x)
-
-
-
-
-
-
 ##### Define action of scaling superoperator on a local operator
 
-    
 
 
 
-
-def doScEval(Ax,qx,sx,yx,vx,wx,chiK,N_level):
+def doScEval(Ax,qx,sx,yx,vx,wx,chiK):
     # function doScEval(Ax,qx,sx,yx,vx,wx,chiK,numeval)
     # ------------------------
-    # translated from Glen Evenbly, v1.0 (2018).
+    # by Glen Evenbly, v1.0 (2018).
     #
     # Compute scaling dimensions from the tensors produced by the
     # (scale-invariant) version of the TNR algorithm, using the logarithmic
@@ -70,28 +56,19 @@ def doScEval(Ax,qx,sx,yx,vx,wx,chiK,N_level):
     print("gT.shape: ",gT.shape)
     print("n: ",n)
 
-    def logScaleSuper(v):
-        v_temp = v.reshape(chir,chig,chir,chig)
-        #print("calculating temp1...")
-        temp1 = np.einsum(rT,[1,2,3,7],gT,[4,5,7,6],order='C',optimize=True)
-        #print("calculating temp2...")
-        temp2 = np.einsum(v_temp,[1,2,14,15],temp1,[1,11,16,2,12,13],order='C',optimize=True)
-        #print("combining temp1 and temp2...")
-        return np.einsum(temp1,[2,23,1,3,24,4],temp2,[21,22,1,2,3,4],order='C',optimize=True).reshape(n)
-    
-    #print("Try: logScaleSuper(np.ones((n)))= ",logScaleSuper(np.ones((n))))
-    print("defining Atemp...")
-    Atemp = LinearOperator((n,n), matvec = logScaleSuper, dtype='float64')
-    
-    #Atemp = SimpleLinOp((chir*chig)**2,logScaleSuper)
+    def logScaleSuper(psi):
+        return np.einsum(psi.reshape(chir,chig,chir,chig),[1,3,5,7],rT,[1,21,8,2],gT,[3,22,2,4],rT,[5,23,4,6],gT,[7,24,6,8],order='C',optimize=True).reshape((chir*chig)**2)
+
+    Atemp = LinearOperator(((chir*chig)**2,(chir*chig)**2), matvec = logScaleSuper)
+
 
     print("calculating eigs")
+    w = scipy.sparse.linalg.eigsh(Atemp, k=4, which='LM', maxiter=5, tol=1e-2, return_eigenvectors=False)
+
     
-    w = scipy.sparse.linalg.eigs(Atemp, k=N_level, which='LM', maxiter=200, tol=1e-5, return_eigenvectors=False)
-
-    spec =  -np.log2(np.abs(w/w[0]))
 
 
 
 
-    return spec
+
+    return -np.log2(np.abs(w/w[0]))
