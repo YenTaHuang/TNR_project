@@ -51,6 +51,17 @@ Xloc = (1/np.sqrt(2))*np.array([[1,1],[1,-1]])
 Ainit = np.einsum(Ainit,[1,2,3,4],Xloc,[1,21],Xloc,[2,22],Xloc,[3,23],Xloc,[4,24])
 Atemp = np.einsum(Ainit,[12,13,3,1],Ainit,[3,14,15,2],Ainit,[11,1,4,18],Ainit,[4,2,16,17]).reshape(4,4,4,4)
 
+# from initialize_XY import Atemp
+# from initialize_Ising import Atemp
+
+print("Initial Atemp.shape: ",Atemp.shape)
+print("Vertical reflection: ",np.linalg.norm(Atemp-np.moveaxis(Atemp,[0,1,2,3],[0,3,2,1])))
+print("Horizontal reflection: ",np.linalg.norm(Atemp-np.moveaxis(Atemp,[0,1,2,3],[2,1,0,3])))
+print("Vertical + Horizontal reflection: ",np.linalg.norm(Atemp-np.moveaxis(Atemp,[0,1,2,3],[2,3,0,1])))
+
+
+
+
 Anorm = [0]*(numlevels+1)
 Anorm[0]=np.linalg.norm(Atemp)
 A = [np.nan]*(numlevels+1)
@@ -91,12 +102,21 @@ for k in range(numlevels):
     print("RGstep: %d ,A_differ: %.6g , Truncation Errors: %.6g, %.6g, %.6g" %(k, Adiff[k],*tuple(SPerrs[k])))
     print("time spent for this RGstep: %.6g"%(time2-time1,))
     print("shape of A:",A[k+1].shape)
+    print("shape of q:",qC[k].shape)
+    print("shape of s:",sC[k].shape)
+    print("shape of u:",uC[k].shape)
+    print("shape of y:",yC[k].shape)
+    print("shape of v:",vC[k].shape)
+    print("shape of w:",wC[k].shape)
+    print("Vertical reflection: ",np.linalg.norm(A[k+1]-np.moveaxis(A[k+1],[0,1,2,3],[0,3,2,1])))
+    print("Horizontal reflection: ",np.linalg.norm(A[k+1]-np.moveaxis(A[k+1],[0,1,2,3],[2,1,0,3])))
+    print("Vertical + Horizontal reflection: ",np.linalg.norm(A[k+1]-np.moveaxis(A[k+1],[0,1,2,3],[2,3,0,1])))
 
 from doScEval import doScEval
 print("Adiff: ",Adiff)
 sclev = np.argmin(Adiff)
 print("sclev: ",sclev)
-chiK=20
+chiK = 20
 N_level = 20
 time1 = time.time()
 scDims=doScEval(A[sclev],qC[sclev],sC[sclev],yC[sclev],vC[sclev],wC[sclev],chiK,N_level)
