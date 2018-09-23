@@ -11,9 +11,9 @@ def doTNR(Aout,chi):
     B,U,vl,vr=optim_Uvlvr(Aout,chi)
     yl,yr,D=optim_ylyrD(B,chi)
     w,Anew,Anorm=optim_w(vl,vr,yl,yr,D,chi)
-    #Anew=fix_gauge(Aout,Anew,chi)
+    Anew,u,v=fix_gauge(Aout,Anew,chi)
 
-    return B,U,vl,vr,yl,yr,D,w,Anew,Anorm
+    return B,U,vl,vr,yl,yr,D,w,u,v,Anew,Anorm
 
 ######################################################
 
@@ -22,13 +22,8 @@ def optim_Uvlvr(A,chi,iter=1001,verbose=True,dtol=1e-10):
     chiu,chiv,chiw,chiy=chi['u'],chi['v'],chi['w'],chi['y']
     chiy=min(chiy,A.shape[0])
     chiw=min(chiw,A.shape[1])
-    # chiu=min(chiu,A.shape[1])
 
     #initialize
-    # Uenv=np.random.rand(chiw,chiw,chiu,chiu)
-    # Uenv=np.random.rand(chiw,chiw,chiu,chiu) if type(Uold)==type(None) else Uold.conj()
-    # Aquad=Aquad_(A)
-    # Uenv=np.einsum(Aquad,[4,0,1,5,4,2,3,5])
     Uenv=KP(np.eye(chiw,chiu),np.eye(chiw,chiu)).reshape(chiw,chiw,chiu,chiu)+0.001*np.random.rand(chiw,chiw,chiu,chiu)
     U=TensorUpdateSVD(Uenv,2)
     vr=np.eye(chiy*chiu).reshape(chiy,chiu,chiy*chiu)
@@ -37,57 +32,25 @@ def optim_Uvlvr(A,chi,iter=1001,verbose=True,dtol=1e-10):
     for i in range(iter):
         AAU=AAU_(A,U)
         vlenvhalf=vlenvhalf_(AAU,vr)
-        vlenv2=vlenv2_(vlenvhalf)
-        _,vl=compress(vlenv2,chiv)
+        vlenv=vlenv_(vlenvhalf)
+        _,vl=compress(vlenv,chiv)
         vrenvhalf=vrenvhalf_(AAU,vl)
-        vrenv2=vrenv2_(vrenvhalf)
-        _,vr=compress(vrenv2,chiv)
+        vrenv=vrenv_(vrenvhalf)
+        _,vr=compress(vrenv,chiv)
         Bhalf=Bhalf_(A,U,vl,vr)
-        Uenv2=Uenv2_(A,vl,vr,Bhalf)
-        U=TensorUpdateSVD(Uenv2,2)
+        Uenv=Uenv_(A,vl,vr,Bhalf)
+        U=TensorUpdateSVD(Uenv,2)
         if i%100==0:
-            norm_U=np.abs(Uenv2.flatten()@U.flatten())
+            norm_U=np.abs(Uenv.flatten()@U.flatten())
             norm_new=norm_U
             if verbose:
                 print('iter=%d, U.Uenv=%.6g'%(i,norm_U))
-            # if np.abs(norm_new-norm_old)<dtol*norm_new:
-            #     break
-            # norm_old=norm_new
+            if np.abs(norm_new-norm_old)<dtol*norm_new:
+                break
+            norm_old=norm_new
 
     Bhalf=Bhalf_(A,U,vl,vr)
     B=B_(Bhalf)
-
-    # vlenv=np.random.rand(chiy,chiu,chiv)
-    # vl=TensorUpdateSVD(vlenv,2)
-    # vrenv=np.random.rand(chiy,chiu,chiv)
-    # vr=TensorUpdateSVD(vrenv,2)
-    # norm_old=0
-
-    # #iterations
-    # for i in range(iter):
-    #     Bhalf=Bhalf_(A,U,vl,vr)
-    #     B=B_(Bhalf)
-
-    #     Uenv=Uenv_(A,U,vl,vr,Bhalf,B)
-    #     # print('update U')
-    #     U=TensorUpdateSVD(Uenv,2)
-    #     vlenv=vlenv_(A,U,vl,vr,Bhalf,B)
-    #     # print('update vl')
-    #     vl=TensorUpdateSVD(vlenv,2)
-    #     vrenv=vrenv_(A,U,vl,vr,Bhalf,B)
-    #     # print('update vr')
-    #     vr=TensorUpdateSVD(vrenv,2)
-
-    #     if i%100==0:
-    #         norm_U=np.abs(Uenv.flatten()@U.flatten())
-    #         norm_vl=np.abs(vlenv.flatten()@vl.flatten())
-    #         norm_vr=np.abs(vrenv.flatten()@vr.flatten())
-    #         norm_new=norm_vr
-    #         if verbose:
-    #             print('iter=%d, U.Uenv=%.6g, vl.vlenv=%.6g, vr.vrenv=%.6g'%(i,norm_U,norm_vl,norm_vr))
-    #         if np.abs(norm_new-norm_old)<dtol*norm_new:
-    #             break
-    #         norm_old=norm_new
 
     #evaluation
     if verbose:
@@ -97,56 +60,30 @@ def optim_Uvlvr(A,chi,iter=1001,verbose=True,dtol=1e-10):
         _,val2,_=np.linalg.svd(rs2(Adouble,2)@rs2(Pu_half,4))
         err1=(np.sum(val)-np.sum(val2))/np.sum(val)
         print('error in U, vl, vr optimization: %.6g'%(err1,)) 
-
-        # Pu=Pu_(U,vl,vr).reshape(chiy*chiw*chiy*chiw,chiy*chiw*chiy*chiw)
-        # Aquad=np.einsum(A,[0,8,9,1],A,[9,10,3,2],A,[4,5,11,8],A,[11,6,7,10],optimize=('greedy', 2**100)).reshape(chiy*chiw*chiy*chiw,chiy*chiw*chiy*chiw)
-
-        # err1=diff(Aquad,Pu@Aquad@Pu)/diff(Aquad,0)
-        # print('error in U, vl, vr optimization: %.6g'%(err1,)) 
     return B,U,vl,vr
-
-def Aquad_(A):
-    return np.einsum(A,[0,1,11,8],A,[11,2,3,9],A,[4,8,10,5],A,[10,9,7,6])
 
 def AAU_(A,U):
     return np.einsum(A,[2,6,8,0],A,[8,7,5,1],U,[6,7,3,4],optimize=('greedy', 2**100))
 def vlenvhalf_(AAU,vr):
     return np.einsum(AAU,[0,1,2,3,5,6],vr,[6,5,4],optimize=('greedy', 2**100))
-def vlenv2_(vlenvhalf):
+def vlenv_(vlenvhalf):
     return np.einsum(vlenvhalf,[4,5,0,1,6],vlenvhalf.conj(),[4,5,2,3,6],optimize=('greedy', 2**100))
 def vrenvhalf_(AAU,vl):
     return np.einsum(AAU,[0,1,6,5,3,2],vl,[6,5,4],optimize=('greedy', 2**100))
-def vrenv2_(vrenvhalf):
+def vrenv_(vrenvhalf):
     return np.einsum(vrenvhalf,[4,5,0,1,6],vrenvhalf.conj(),[4,5,2,3,6],optimize=('greedy', 2**100))
-def Uenv2_(A,vl,vr,Bhalf):
+def Uenv_(A,vl,vr,Bhalf):
     return np.einsum(A,[4,0,10,6],A,[10,1,5,7],vl,[4,2,8],vr,[5,3,9],Bhalf.conj(),[6,7,8,9],optimize=('greedy', 2**100))
-
-
 def Bhalf_(A,U,vl,vr):
     return np.einsum(A,[4,5,6,0],A,[6,7,10,1],U,[5,7,8,9],vl,[4,8,2],vr,[10,9,3],optimize=('greedy', 2**100))
-
 def B_(Bhalf):
     return np.einsum(Bhalf,[4,5,2,3],Bhalf.conj(),[4,5,0,1],optimize=('greedy', 2**100))
-
-def Uenv_(A,U,vl,vr,Bhalf,B):
-    return np.einsum(A,[4,5,6,0],A,[6,7,10,1],vl,[4,8,2],vr,[10,9,3],Bhalf.conj(),[0,1,11,12],B.conj(),[11,12,2,3],optimize=('greedy', 2**100))
-
-def vlenv_(A,U,vl,vr,Bhalf,B):
-    vlenv=np.einsum(A,[4,5,6,0],A,[6,7,10,1],U,[5,7,8,9],vr,[10,9,3],Bhalf.conj(),[0,1,11,12],B.conj(),[11,12,2,3],optimize=('greedy', 2**100))
-    return vlenv.transpose(1,2,0)
-
-def vrenv_(A,U,vl,vr,Bhalf,B):
-    vrenv=np.einsum(A,[4,5,6,0],A,[6,7,10,1],U,[5,7,8,9],vl,[4,8,2],Bhalf.conj(),[0,1,11,12],B.conj(),[11,12,2,3],optimize=('greedy', 2**100))
-    return vrenv.transpose(2,1,0)
-
-# def Pu_(U,vl,vr):
-#     return np.einsum(U,[1,2,6,7],vl,[0,6,4],vr,[3,7,5],U.conj(),[11,12,8,9],vl.conj(),[10,8,4],vr.conj(),[13,9,5],optimize=('greedy', 2**100))
-
 def Adouble_(A):
     return np.einsum(A,[2,3,6,0],A,[6,4,5,1],optimize=('greedy', 2**100))
 
 def Pu_half_(U,vl,vr):
     return np.einsum(U,[1,2,6,7],vl,[0,6,4],vr,[3,7,5],optimize=('greedy', 2**100))
+
 ############################################
 def optim_ylyrD(B,chi,verbose=True):
     #optimize yl, yr, D
@@ -157,7 +94,6 @@ def optim_ylyrD(B,chi,verbose=True):
 
     #evaluation
     if verbose:
-        #err2=diff(B,np.einsum(yl.conj()*D,[0,2,4],yr.conj(),[1,3,4]))/diff(B,0)
         _,val,_=np.linalg.svd(rs2(B.transpose(0,2,1,3),2))
         err2=(np.sum(val)-np.sum(D))/np.sum(val)
         print('error in yl, yr, D optimization: %.6g'%(err2,))
@@ -171,23 +107,7 @@ def optim_w(vl,vr,yl,yr,D,chi,iter=101,verbose=True,dtol=1e-8):
     chiw,chiy,chiu,chiv=chi['w'],chi['y'],chi['u'],chi['v']
     ring=ring_(vl,vr,yl,yr,D)
     wenv=wenv_(ring)
-    # _,w=eigCut(wenv.reshape(chiu*chiu,chiu*chiu),chiw)
-    # w=w.conj().reshape(chiu,chiu,chiw)
     _,w=compress(wenv,chiw)
-    # norm_old=0
-
-    # #iterations
-    # for i in range(iter):
-    #     wenv2=wenv2_(ring,w)
-    #     if i%100==0:
-    #         norm_new=np.abs(np.einsum(wenv2,[0,1,2,3],w,[0,1,4],w.conj(),[2,3,4]))
-    #         if verbose:
-    #             print('iter=%d, w.w*.wenv2=%.6g'%(i,norm_new))
-    #         if np.abs(norm_new-norm_old)<dtol*norm_new:
-    #             break
-    #         norm_old=norm_new
-    #     _,w=eigCut(wenv2.reshape(chiu*chiu,chiu*chiu),chiw)
-    #     w=w.conj().reshape(chiu,chiu,chiw)
 
     Anew=np.einsum(ring,[4,5,0,2,6,7],w,[6,7,1],w.conj(),[4,5,3],optimize=('greedy', 2**100))
 
@@ -208,16 +128,17 @@ def ring_(vl,vr,yl,yr,D):
 def wenv_(ring):
     return np.einsum(ring,[4,5,6,7,0,1],ring.conj(),[4,5,6,7,2,3],optimize=('greedy', 2**100))
 
-# def wenv2_(ring,w):
-#     return np.einsum(ring,[4,5,6,7,0,1],ring.conj(),[8,9,6,7,2,3],w,[8,9,10],w.conj(),[4,5,10],optimize=('greedy', 2**100))
-
 ####################################################
 def fix_gauge(Aold,Anew,chi,iter=10001,verbose=True,dtol=1e-8):
     #fix gauge
+    if Anew.shape!=Aold.shape:
+        print('Anew.shape!=Aold.shape, skip fix_gauge')
+        u,v=None,None
+        return Anew,u,v
+
     chiw,chiy,chiu,chiv=chi['w'],chi['y'],chi['u'],chi['v']
     chiy=min(chiy,Aold.shape[0])
     chiw=min(chiw,Aold.shape[1])
-    chiu=min(chiu,Aold.shape[1])
 
     #initialize
     u=np.eye(chiw)
@@ -246,7 +167,6 @@ def fix_gauge(Aold,Anew,chi,iter=10001,verbose=True,dtol=1e-8):
     #evaluation
     if verbose:
         Adiff=diff(Anew,Aold)
-    #     Adiff=diff(Aval(Aout),Aval(Anew))/diff(Aval(Aout),0)
         print('Adiff %.6g'%(Adiff,)) 
     return Anew,u,v
 
@@ -254,11 +174,6 @@ def uenv_(Aold,Anew,u,v):
     return np.einsum(Aold.conj(),[5,1,3,4],Anew,[6,0,2,7],u.conj(),[7,4],v,[2,3],v.conj(),[6,5],optimize=('greedy', 2**100))
 def venv_(Aold,Anew,u,v):
     return np.einsum(Aold.conj(),[5,1,3,4],Anew,[6,0,2,7],u,[0,1],u.conj(),[7,4],v.conj(),[6,5],optimize=('greedy', 2**100))
-
-# def Aval(A):
-#     A2=np.einsum(A,[3,1,3,0])
-#     val,_=np.linalg.eigh(A2)
-#     return val[::-1]
 
 ####################################################
 #scaling op
@@ -296,6 +211,46 @@ def Mscaled_(M,A,U,vl,vr,yl,yr,D,w,u,v):
     gnw,gne=gauge_(gnw,gne,u,v)
     Mscaled=rg_(M,gl,gr,gu,gnw,gne)
     return Mscaled
+
+####################################################
+#eval op
+
+def eval_op(op,tensor_list):
+    '''
+    evaluates expectation for operator op
+    '''
+    A_list,U_list,vl_list,vr_list,yl_list,yr_list,D_list,w_list,u_list,v_list=tensor_list['A'],tensor_list['U'],tensor_list['vl'],tensor_list['vr'],tensor_list['yl'],tensor_list['yr'],tensor_list['D'],tensor_list['w'],tensor_list['u'],tensor_list['v']
+    RGsteps=len(A_list)-1
+    MA_list=[None]*(RGsteps+1)
+    MO_list=[None]*(RGsteps+1)
+    A0=A_list[0]
+    MA=MA_(A0)
+    MAtrace=Mtrace_(MA)
+    MA_list[0]=MA/MAtrace
+    MO_list[0]=MO_(A0,op)/MAtrace
+
+    for i in range(RGsteps):
+        MAold=MA_list[i]
+        MOold=MO_list[i]
+        A,U,vl,vr,yl,yr,D,w,u,v=\
+        A_list[i],U_list[i],vl_list[i],vr_list[i],yl_list[i],yr_list[i],D_list[i],w_list[i],u_list[i],v_list[i]
+        MA=Mscaled_(MAold,A,U,vl,vr,yl,yr,D,w,u,v)
+        MO=Mscaled_(MOold,A,U,vl,vr,yl,yr,D,w,u,v)
+        MAtrace=Mtrace_(MA)
+        MA_list[i+1]=MA/MAtrace
+        MO_list[i+1]=MO/MAtrace
+        expect_O=Mtrace_(MO/MAtrace)
+        print('<O>=',chop(expect_O))
+
+    return expect_O
+
+
+def MA_(A0):
+    return np.einsum(A0,[2,9,8,0],A0,[8,10,3,1],A0,[4,6,11,9],A0,[11,7,5,10])
+def MO_(A0,op):
+    return np.einsum(A0,[2,9,8,0],A0,[8,10,3,1],A0,[4,6,11,9],A0@op,[11,7,5,10])
+def Mtrace_(MA):
+    return np.einsum(MA,[0,1,2,2,3,3,0,1])
 
 ####################################################
 #utils
