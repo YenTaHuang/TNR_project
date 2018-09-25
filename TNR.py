@@ -179,20 +179,20 @@ def venv_(Aold,Anew,u,v):
 #scaling op
 
 def gl_(vl):
-    return np.einsum(vl,[1,4,3],vl.conj(),[0,4,2])
+    return np.einsum(vl,[1,4,3],vl.conj(),[0,4,2],optimize=('greedy', 2**100))
 def gr_(vr):
-    return np.einsum(vr,[1,4,3],vr.conj(),[0,4,2])
+    return np.einsum(vr,[1,4,3],vr.conj(),[0,4,2],optimize=('greedy', 2**100))
 def gu_(A,U,vl,vr):
     Adouble=Adouble_(A)
     Pu_half=Pu_half_(U,vl,vr)
-    return np.einsum(Adouble,[0,1,4,5,6,7],Pu_half,[4,5,6,7,2,3])
+    return np.einsum(Adouble,[0,1,4,5,6,7],Pu_half,[4,5,6,7,2,3],optimize=('greedy', 2**100))
 def gnw_(vl,vr,yr,D,w):
-    return np.einsum(vl.conj(),[4,6,1],vr.conj(),[4,5,7],yr.conj()*np.sqrt(D),[0,7,2],w,[5,6,3])
+    return np.einsum(vl.conj(),[4,6,1],vr.conj(),[4,5,7],yr.conj()*np.sqrt(D),[0,7,2],w,[5,6,3],optimize=('greedy', 2**100))
 def gne_(vl,vr,yl,D,w):
-    return np.einsum(vl.conj(),[4,6,7],vr.conj(),[4,5,1],yl.conj()*np.sqrt(D),[0,7,2],w,[5,6,3])
+    return np.einsum(vl.conj(),[4,6,7],vr.conj(),[4,5,1],yl.conj()*np.sqrt(D),[0,7,2],w,[5,6,3],optimize=('greedy', 2**100))
 
 def rg_(M,gl,gr,gu,gnw,gne):
-    return np.einsum(M,[8,9,10,11,12,13,14,15],gl,[11,13,19,21],gr,[10,12,18,20],gu,[14,15,22,23],gu.conj(),[8,9,16,17],gnw,[20,22,4,6],gne,[21,23,5,7],gnw.conj(),[18,16,2,0],gne.conj(),[19,17,3,1])
+    return np.einsum(M,[8,9,10,11,12,13,14,15],gl,[11,13,19,21],gr,[10,12,18,20],gu,[14,15,22,23],gu.conj(),[8,9,16,17],gnw,[20,22,4,6],gne,[21,23,5,7],gnw.conj(),[18,16,2,0],gne.conj(),[19,17,3,1],optimize=('greedy', 2**100))
 
 def gauge_(gnw,gne,u,v):
     if type(u)==type(None):
