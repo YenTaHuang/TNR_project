@@ -240,7 +240,7 @@ def eval_op(op,tensor_list):
         MA_list[i+1]=MA/MAtrace
         MO_list[i+1]=MO/MAtrace
         expect_O=Mtrace_(MO/MAtrace)
-        print('<O>=',chop(expect_O))
+        print('RGsteps:',i,', <O> =',chop(expect_O))
 
     return expect_O
 
@@ -290,14 +290,20 @@ def Asplit(Ainit,chi,verbose=True):
     return Aout
 
 def h_cut(A,chimax,dtol=1e-10,return_tr=False):
+    '''
+    Input: 
+    A: a four leg tensor of shape (N,N,M,M)
+    output: vl,w,vr, vl.shape=(N,M,K), w.shape=(K,), vr.shape=
+    which approximates A.transpose(0,2,1,3)~vl.w.vr
+    '''
     #horizontal cut
     As=A.shape
     Ah=A.transpose(0,2,1,3).reshape(As[0]*As[2],As[1]*As[3])
     u,w,vt=np.linalg.svd(Ah,full_matrices=False)
     tr=np.sum(w)
     mask=(w[:chimax]>dtol*tr)
-    if any(1-mask):
-        print('h_cut: w to be truncated:',w)
+    # if any(1-mask):
+    #     print('h_cut: w to be truncated:',w)
     w=w[:chimax][mask]
     u=u[:,:chimax][:,mask]
     vt=vt[:chimax,:][mask,:]
@@ -321,7 +327,7 @@ def h_cut(A,chimax,dtol=1e-10,return_tr=False):
 def TensorUpdateSVD(env,leftnum,dtol=1e-10):
     '''
     input: env, dims[N0,N1,...,N_leftnum-1,M_0,M-1,...]
-    returns: 
+    returns: isometry 'out' with dim same as env, which maximizes out.env
     '''
     envs = env.shape
     U,S,Vh = np.linalg.svd(rs2(env,leftnum),full_matrices=False)
@@ -336,12 +342,6 @@ def TensorUpdateSVD(env,leftnum,dtol=1e-10):
 def rs2(tensor,leftnum):
     ts=tensor.shape
     return tensor.reshape(np.prod(ts[:leftnum]),np.prod(ts[leftnum:]))
-
-def eigCut(rho,chimax):
-    w, v = np.linalg.eigh(rho)
-    w = w[::-1]
-    v = v[:,::-1]
-    return w[:chimax],v[:,:chimax]
 
 def compress(env,chimax,dtol=1e-10,return_tr=False):
     """
