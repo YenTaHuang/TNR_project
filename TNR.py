@@ -1,17 +1,18 @@
 import numpy as np
 from scipy.linalg import expm,sqrtm
+import warnings
 
-def doTNR(Aout,chi):
+def doTNR(Aold,chi):
     chiw,chiy,chiu,chiv=chi['w'],chi['y'],chi['u'],chi['v']
     assert chiu<=chiw, 'chiu>chiw'
     assert chiv<=chiu*chiy, 'chiv>chiu*chiy'
     assert chiy<=chiv**2, 'chiy>chiv**2'
     assert chiw<=chiu**2,'chiw>chiu**2'
     #doTNR
-    B,U,vl,vr=optim_Uvlvr(Aout,chi)
+    B,U,vl,vr=optim_Uvlvr(Aold,chi)
     yl,yr,D=optim_ylyrD(B,chi)
     w,Anew,Anorm=optim_w(vl,vr,yl,yr,D,chi)
-    Anew,u,v=fix_gauge(Aout,Anew,chi)
+    Anew,u,v=fix_gauge(Aold,Anew,chi)
 
     return B,U,vl,vr,yl,yr,D,w,u,v,Anew,Anorm
 
@@ -24,7 +25,7 @@ def optim_Uvlvr(A,chi,iter=1001,verbose=True,dtol=1e-10):
     chiw=min(chiw,A.shape[1])
 
     #initialize
-    Uenv=KP(np.eye(chiw,chiu),np.eye(chiw,chiu)).reshape(chiw,chiw,chiu,chiu)+0.001*np.random.rand(chiw,chiw,chiu,chiu)
+    Uenv=KP(np.eye(chiw,chiu),np.eye(chiw,chiu)).reshape(chiw,chiw,chiu,chiu)+0*np.random.rand(chiw,chiw,chiu,chiu)
     U=TensorUpdateSVD(Uenv,2)
     vr=np.eye(chiy*chiu).reshape(chiy,chiu,chiy*chiu)
     norm_old=0
@@ -183,9 +184,7 @@ def gl_(vl):
 def gr_(vr):
     return np.einsum(vr,[1,4,3],vr.conj(),[0,4,2],optimize=('greedy', 2**100))
 def gu_(A,U,vl,vr):
-    Adouble=Adouble_(A)
-    Pu_half=Pu_half_(U,vl,vr)
-    return np.einsum(Adouble,[0,1,4,5,6,7],Pu_half,[4,5,6,7,2,3],optimize=('greedy', 2**100))
+    return Bhalf_(A,U,vl,vr)
 def gnw_(vl,vr,yr,D,w):
     return np.einsum(vl.conj(),[4,6,1],vr.conj(),[4,5,7],yr.conj()*np.sqrt(D),[0,7,2],w,[5,6,3],optimize=('greedy', 2**100))
 def gne_(vl,vr,yl,D,w):
@@ -195,6 +194,9 @@ def rg_(M,gl,gr,gu,gnw,gne):
     return np.einsum(M,[8,9,10,11,12,13,14,15],gl,[11,13,19,21],gr,[10,12,18,20],gu,[14,15,22,23],gu.conj(),[8,9,16,17],gnw,[20,22,4,6],gne,[21,23,5,7],gnw.conj(),[18,16,2,0],gne.conj(),[19,17,3,1],optimize=('greedy', 2**100))
 
 def gauge_(gnw,gne,u,v):
+    '''
+    Attach gauge transformations u,v to gnw,gne if available
+    '''
     if type(u)==type(None):
         return gnw,gne
     else:
@@ -215,7 +217,7 @@ def Mscaled_(M,A,U,vl,vr,yl,yr,D,w,u,v):
 ####################################################
 #eval op
 
-def eval_op(op,tensor_list):
+def eval_op(MO0,tensor_list):
     '''
     evaluates expectation for operator op
     '''
@@ -227,7 +229,8 @@ def eval_op(op,tensor_list):
     MA=MA_(A0)
     MAtrace=Mtrace_(MA)
     MA_list[0]=MA/MAtrace
-    MO_list[0]=MO_(A0,op)/MAtrace
+    # MO_list[0]=MO_(A0,op)/MAtrace
+    MO_list[0]=MO0/MAtrace
 
     for i in range(RGsteps):
         MAold=MA_list[i]
@@ -253,16 +256,11 @@ def Mtrace_(MA):
     return np.einsum(MA,[0,1,2,2,3,3,0,1])
 
 ####################################################
-#utils
-sx=np.array([[0,1],[1,0]])
-sy=np.array([[0,-1j],[1j,0]])
-sz=np.array([[1,0],[0,-1]])
-s0=np.array([[1,0],[0,1]])
-
+#initialize A
 def Asplit(Ainit,chi,verbose=True):
     '''
     input: Ainit, chi, op: operator acting on a leg
-    output:up-down symmetric Aout
+    output:up-down symmetric normalized Aout
     '''
     chiw,chiy,chiu,chiv=chi['w'],chi['y'],chi['u'],chi['v']
     
@@ -273,13 +271,16 @@ def Asplit(Ainit,chi,verbose=True):
     #horizontal cut
     vl2,w2,vr2,tr2= h_cut(Ainit,chiy,return_tr=verbose)
 
-    assert diff(vl2,vl2.transpose(1,0,2).conj())<1e-10, 'vl2 err'
-    assert diff(vr2,vr2.transpose(1,0,2).conj())<1e-10, 'vr2 err'
+    if diff(vl2*w2,(vl2*w2).transpose(1,0,2).conj())>1e-5*diff(vl2*w2,0):
+        warnings.warn('Asplit vl2 err')
+    if diff(vr2*w2,(vr2*w2).transpose(1,0,2).conj())>1e-5*diff(vr2*w2,0):
+        warnings.warn('Asplit vr2 err')
 
-    Aout=np.einsum(vr2,[4,5,0],v,[5,7,1],vl2*w2,[6,7,2],v.conj(),[4,6,3])
+    Aout=np.einsum(vr2*np.sqrt(w2),[4,5,0],v,[5,7,1],vl2*np.sqrt(w2),[6,7,2],v.conj(),[4,6,3])
     Aout/=np.linalg.norm(Aout)
 
-    assert diff(Aout,Aout.transpose(0,3,2,1).conj())<1e-10, 'Anorm err'
+    if diff(Aout,Aout.transpose(0,3,2,1).conj())>1e-5*diff(Aout,0):
+        warnings.warn('Asplit Aout err')
 
     if verbose:
         err1=(tr1-np.sum(w1))/tr1
@@ -289,40 +290,123 @@ def Asplit(Ainit,chi,verbose=True):
         print('Aout shape:',Aout.shape)
     return Aout
 
+#using hcut
+
+def coarsen(A,chi):
+    chiw,chiy,chiu,chiv=chi['w'],chi['y'],chi['u'],chi['v']
+    waenv=waenv_(A)
+#     print('waenv symmetric:',diff(waenv.transpose(2,3,0,1).conj(),waenv)/diff(waenv,0))
+    wl,ev,wr,tr=h_cut(waenv,chiy,return_tr=True)
+    wl=wl.conj()
+    wr=wr.conj()
+    Acoarse=Acoarse_(A,wl,wr)
+    Acoarse/=np.linalg.norm(Acoarse)
+    tr2=np.sum(ev)
+    err=(tr-tr2)/tr
+    print('Coarsen truncation error: %.6g'%(err.real,))
+    return Acoarse
+
+def waenv_(A):
+    return np.einsum(A.conj(),[0,8,6,4],A.conj(),[2,5,7,8],A,[1,9,6,4],A,[3,5,7,9])
+def Acoarse_(A,wl,wr):
+    return np.einsum(A,[4,8,6,3],A,[5,1,7,8],wl,[6,7,2],wr,[4,5,0])
+
+# def coarsen(A,chi):
+#     chiy=chi['y']
+#     waenv=waenv_(A)
+#     ev,wa=compress(waenv,chiy,do_symmetrize=True)
+    
+#     Acoarse=Acoarse_(A,wa)
+#     tr1=np.einsum(A,[0,1,0,3],A,[2,3,2,1])
+#     tr2=np.einsum(Acoarse,[0,1,0,1])
+#     err=(tr1-tr2)/tr1
+#     print('Coarsen truncation error: %.6g'%(err.real,))
+#     Acoarse/=np.linalg.norm(Acoarse)
+#     if diff(Acoarse,Acoarse.transpose(0,3,2,1).conj())>1e-5:
+#         warnings.warn('Acoarse not symmetric')
+#     return Acoarse
+
+# def waenv_(A):
+#     return np.einsum(A.conj(),[0,8,6,4],A.conj(),[1,5,7,8],A,[2,9,6,4],A,[3,5,7,9])
+# def Acoarse_(A,wa):
+#     return np.einsum(A,[4,8,6,3],A,[5,1,7,8],wa,[6,7,2],wa.conj(),[4,5,0])
+
+####################################################
+#utils
+
 def h_cut(A,chimax,dtol=1e-10,return_tr=False):
     '''
     Input: 
-    A: a four leg tensor of shape (N,N,M,M)
-    output: vl,w,vr, vl.shape=(N,M,K), w.shape=(K,), vr.shape=
-    which approximates A.transpose(0,2,1,3)~vl.w.vr
+    A: a four leg tensor of shape (N,N,N,N)
+    output: vl,w,vr, vl.shape=(N,N,K), w.shape=(K,), vr.shape=(N,N,K)
+    which approximates A.transpose(0,2,1,3)~vl.w.vr.transpose(2,0,1)
     '''
     #horizontal cut
     As=A.shape
     Ah=A.transpose(0,2,1,3).reshape(As[0]*As[2],As[1]*As[3])
     u,w,vt=np.linalg.svd(Ah,full_matrices=False)
     tr=np.sum(w)
-    mask=(w[:chimax]>dtol*tr)
-    # if any(1-mask):
-    #     print('h_cut: w to be truncated:',w)
+    vl=u.reshape(As[0],As[2],-1)
+    vr=vt.T.reshape(As[1],As[3],-1)
+    vl,vr=symmetrize(vl,w,vr)
+
+    mask=(w[:chimax]>-dtol*tr)
     w=w[:chimax][mask]
-    u=u[:,:chimax][:,mask]
-    vt=vt[:chimax,:][mask,:]
-    chinew=len(w)
-    vl=u.reshape(As[0],As[2],chinew)
-    vr=vt.T.reshape(As[1],As[3],chinew)
-
-    #symmetrize between leg 0 and 1
-    uTu=(vl.transpose(2,1,0).reshape(chinew,As[0]*As[2])@u).conj()
-    uu=sqrtm(uTu)
-
-    assert diff(uu*w,uu*w[:,np.newaxis])<1e-10*diff(uu*w,0), 'uu does not commute with w'
-
-    vl=vl@uu
-    vr=vr@uu.conj()
+    vl=vl[:,:,:chimax][:,:,mask]
+    vr=vr[:,:,:chimax][:,:,mask]
+    
     if return_tr:
         return vl,w,vr,tr
     else:
         return vl,w,vr
+
+def compress(env,chimax,dtol=1e-10,return_tr=False,do_symmetrize=False):
+    """
+    compress two legs into one leg, env dimension: (N,M,N,M), 
+    output: w,v,tr; w: eigenvalues; projector v, dims: (N,M,K), K<=chimax
+    env.v.v.ct() ~ trace(env); env ~ v.conj().w.v^T
+    """
+    env2=rs2(env,2)
+    w,v=np.linalg.eigh(env2)
+    w = w[::-1]
+    v = v[:,::-1]
+    tr=np.sum(w)
+    if do_symmetrize and env.shape[0]==env.shape[1]:
+        vl=v.reshape(env.shape[0],env.shape[1],-1)
+        vr=vl.conj()
+        vl,vr=symmetrize(vl,w,vr)
+        v=rs2(vl,2)
+
+    mask=(w[:chimax]>-dtol*tr)
+    # if any(1-mask):
+    #     print('compress: w to be truncated:',w)
+    w=w[:chimax][mask]
+    v=v[:,:chimax][:,mask]
+    v=v.conj().reshape(env.shape[0],env.shape[1],v.shape[1])
+    if return_tr:
+        return w,v,tr
+    else:
+        return w,v
+
+def symmetrize(vl,w,vr):
+    '''
+    input: vl :(N,N,K), vr: (N,N,K)
+    output: symmetrized vl,vr
+    '''
+    N,_,K=vl.shape
+    u=vl.reshape(N*N,K)
+    uTu=(vl.transpose(2,1,0).reshape(K,N*N)@u).conj()
+    uu=sqrtm(uTu)
+    if diff(uu*w,uu*w[:,np.newaxis])>1e-5*diff(uu*w,0):
+        warnings.warn('uu does not commute with w')
+    vl=vl@uu
+    vr=vr@uu.conj()
+    if diff(vl*w,(vl*w).transpose(1,0,2).conj())>1e-5*diff(vl*w,0):
+        warnings.warn('vl not symmetric')
+    if diff(vr*w,(vr*w).transpose(1,0,2).conj())>1e-5*diff(vr*w,0):
+        warnings.warn('vr not symmetric')
+
+    return vl,vr
 
 def TensorUpdateSVD(env,leftnum,dtol=1e-10):
     '''
@@ -330,6 +414,7 @@ def TensorUpdateSVD(env,leftnum,dtol=1e-10):
     returns: isometry 'out' with dim same as env, which maximizes out.env
     '''
     envs = env.shape
+    env[np.abs(env)<dtol*np.linalg.norm(env)]=0
     U,S,Vh = np.linalg.svd(rs2(env,leftnum),full_matrices=False)
     tr=np.sum(S)
     mask=(S>dtol*tr)
@@ -343,30 +428,11 @@ def rs2(tensor,leftnum):
     ts=tensor.shape
     return tensor.reshape(np.prod(ts[:leftnum]),np.prod(ts[leftnum:]))
 
-def compress(env,chimax,dtol=1e-10,return_tr=False):
-    """
-    compress two legs into one leg, env dimension: (N,M,N,M), 
-    output: w,v,tr; w: eigenvalues; projector v, dims: (N,M,K), K<=chimax
-    env.v.v.cj() ~ trace(env); env ~ v.conj().w.v^T
-    """
-    env2=rs2(env,2)
-    w,v=np.linalg.eigh(env2)
-    w = w[::-1]
-    v = v[:,::-1]
-    tr=np.sum(w)
-    mask=(w[:chimax]>dtol*tr)
-    # if any(1-mask):
-    #     print('compress: w to be truncated:',w)
-    w=w[:chimax][mask]
-    v=v[:,:chimax][:,mask]
-    v=v.conj().reshape(env.shape[0],env.shape[1],v.shape[1])
-    if return_tr:
-        return w,v,tr
-    else:
-        return w,v
-
 def diff(A1,A2):
     return np.linalg.norm(A1-A2)
+
+def ishermitian(A):
+    return diff(A.transpose(0,3,2,1).conj(),A)/diff(A,0)
 
 def KP(*arg):
     if len(arg)<=2:
@@ -377,4 +443,8 @@ def KP(*arg):
 def chop(x,tol=1e-10):
     return x.real*(abs(x.real)>tol)+1j*x.imag*(abs(x.imag)>tol)
 
+sx=np.array([[0,1],[1,0]])
+sy=np.array([[0,-1j],[1j,0]])
+sz=np.array([[1,0],[0,-1]])
+s0=np.array([[1,0],[0,1]])
 ###############################################################
