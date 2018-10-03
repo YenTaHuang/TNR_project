@@ -237,6 +237,7 @@ def eval_op(MO0,tensor_list):
         MOold=MO_list[i]
         A,U,vl,vr,yl,yr,D,w,u,v=\
         A_list[i],U_list[i],vl_list[i],vr_list[i],yl_list[i],yr_list[i],D_list[i],w_list[i],u_list[i],v_list[i]
+        # import pdb;pdb.set_trace()
         MA=Mscaled_(MAold,A,U,vl,vr,yl,yr,D,w,u,v)
         MO=Mscaled_(MOold,A,U,vl,vr,yl,yr,D,w,u,v)
         MAtrace=Mtrace_(MA)
@@ -255,9 +256,12 @@ def MO_(A0,op):
 def Mtrace_(MA):
     return np.einsum(MA,[0,1,2,2,3,3,0,1])
 
+def MOq_(A0,Az):
+    return 0.5*(np.einsum(A0,[2,9,8,0],A0,[8,10,3,1],A0,[4,6,11,9],Az,[11,7,5,10])+np.einsum(A0,[2,9,8,0],Az,[8,10,3,1],A0,[4,6,11,9],A0,[11,7,5,10]))
+
 ####################################################
 #initialize A
-def Asplit(Ainit,chi,verbose=True):
+def Asplit(Ainit,chi,verbose=True,op=None):
     '''
     input: Ainit, chi, op: operator acting on a leg
     output:up-down symmetric normalized Aout
@@ -277,7 +281,8 @@ def Asplit(Ainit,chi,verbose=True):
         warnings.warn('Asplit vr2 err')
 
     Aout=np.einsum(vr2*np.sqrt(w2),[4,5,0],v,[5,7,1],vl2*np.sqrt(w2),[6,7,2],v.conj(),[4,6,3])
-    Aout/=np.linalg.norm(Aout)
+    Anorm=np.linalg.norm(Aout)
+    Aout/=Anorm
 
     if diff(Aout,Aout.transpose(0,3,2,1).conj())>1e-5*diff(Aout,0):
         warnings.warn('Asplit Aout err')
@@ -288,28 +293,40 @@ def Asplit(Ainit,chi,verbose=True):
         print('vertical truncation err:',err1)
         print('horizontal truncation err:',err2)
         print('Aout shape:',Aout.shape)
-    return Aout
+    if type(op)==type(None):
+        return Aout
+    else:
+        Azout=0.5*(np.einsum(vr2*np.sqrt(w2),[4,5,0],v,[5,7,1],op@vl2*np.sqrt(w2),[6,7,2],v.conj(),[4,6,3])+np.einsum(vr2*np.sqrt(w2),[4,5,0],v,[5,7,1],vl2*np.sqrt(w2),[6,7,2],op@v.conj(),[4,6,3]))
+        Azout/=Anorm
+        return Aout, Azout
+
 
 #using hcut
 
-def coarsen(A,chi):
+def coarsen(A,chi,Az=None):
     chiw,chiy,chiu,chiv=chi['w'],chi['y'],chi['u'],chi['v']
     waenv=waenv_(A)
 #     print('waenv symmetric:',diff(waenv.transpose(2,3,0,1).conj(),waenv)/diff(waenv,0))
     wl,ev,wr,tr=h_cut(waenv,chiy,return_tr=True)
     wl=wl.conj()
     wr=wr.conj()
-    Acoarse=Acoarse_(A,wl,wr)
-    Acoarse/=np.linalg.norm(Acoarse)
+    Acoarse=Acoarse_(A,A,wl,wr)
+    Anorm=np.linalg.norm(Acoarse)
+    Acoarse/=Anorm
     tr2=np.sum(ev)
     err=(tr-tr2)/tr
     print('Coarsen truncation error: %.6g'%(err.real,))
-    return Acoarse
+    if type(Az)==type(None):
+        return Acoarse
+    else:
+        Azcoarse=0.5*(Acoarse_(A,Az,wl,wr)+Acoarse_(Az,A,wl,wr))
+        Azcoarse/=Anorm
+        return Acoarse, Azcoarse
 
 def waenv_(A):
     return np.einsum(A.conj(),[0,8,6,4],A.conj(),[2,5,7,8],A,[1,9,6,4],A,[3,5,7,9])
-def Acoarse_(A,wl,wr):
-    return np.einsum(A,[4,8,6,3],A,[5,1,7,8],wl,[6,7,2],wr,[4,5,0])
+def Acoarse_(A1,A2,wl,wr):
+    return np.einsum(A1,[4,8,6,3],A2,[5,1,7,8],wl,[6,7,2],wr,[4,5,0])
 
 # def coarsen(A,chi):
 #     chiy=chi['y']
@@ -447,4 +464,10 @@ sx=np.array([[0,1],[1,0]])
 sy=np.array([[0,-1j],[1j,0]])
 sz=np.array([[1,0],[0,-1]])
 s0=np.array([[1,0],[0,1]])
+
+import scipy
+pi=scipy.pi
+
+R=np.diag(np.exp([0,2*pi*1j/3,-2*pi*1j/3]))
+M=np.array([[0,0,1],[1,0,0],[0,1,0]])
 ###############################################################
