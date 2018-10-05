@@ -154,11 +154,9 @@ def fix_gauge(Aold,Anew,chi,iter=10001,verbose=True,dtol=1e-8):
     # v=np.eye(Anew.shape[0])
     vtrunc=np.eye(Anew.shape[0],Aold.shape[0])
     Aold3=ncon(vtrunc,[0,3],vtrunc,[1,4],Aold,[3,2,4,2]).real
-    Aold3+=Aold3.T
-    _,vAold=np.linalg.eigh(Aold3)
+    _,vAold=np.linalg.eigh(Aold3+Aold3.T)
     Anew3=ncon(Anew,[0,2,1,2]).real
-    Anew3+=Anew3.T
-    _,vAnew=np.linalg.eigh(Anew3)
+    _,vAnew=np.linalg.eigh(Anew3+Anew3.T)
     v=vAnew@vAold.T
 
     norm_old=0
@@ -287,6 +285,33 @@ def Mtrace_(MA):
 def MOq_(A0,Az):
     return 0.5*(ncon(A0,[2,9,8,0],A0,[8,10,3,1],A0,[4,6,11,9],Az,[11,7,5,10])+ncon(A0,[2,9,8,0],Az,[8,10,3,1],A0,[4,6,11,9],A0,[11,7,5,10]))
 
+
+####################################################
+# scaleop compress legs
+
+def g_compressed(A,gu,gr,gl,chik):
+    wvenv=wvenv_(A)
+    ev,wv,tr=compress(wvenv,chik,return_tr=True)
+    print('gu compression error:',(tr-np.sum(ev))/tr)
+    wrenv=wrenv_(gr)
+    ev,wr,tr=compress(wrenv,chik,return_tr=True,do_symmetrize=True)
+    print('gr compression error:',(tr-np.sum(ev))/tr)
+    wlenv=wlenv_(gl)
+    ev,wl,tr=compress(wlenv,chik,return_tr=True,do_symmetrize=True)
+    print('gl compression error:',(tr-np.sum(ev))/tr)
+
+    guw=np.einsum(gu,[3,4,1,2],wv.conj(),[3,4,0])
+    glw=np.einsum(gl,[3,4,1,2],wl.conj(),[3,4,0])
+    grw=np.einsum(gr,[3,4,1,2],wr.conj(),[3,4,0])
+
+    return guw,glw,grw,wv,wr,wl
+
+def wvenv_(A):
+    return np.einsum(A,[8,0,6,5],A,[6,1,7,4],A.conj(),[8,2,9,5],A.conj(),[9,3,7,4])
+def wrenv_(gr):
+    return ncon(gr.conj(),[0,1,4,5],gr,[2,3,4,5])
+def wlenv_(gl):
+    return ncon(gl.conj(),[0,1,4,5],gl,[2,3,4,5])
 ####################################################
 #initialize A
 def Asplit(Ainit,chi,verbose=True,op=None):
