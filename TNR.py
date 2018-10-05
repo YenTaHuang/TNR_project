@@ -141,24 +141,41 @@ def fix_gauge(Aold,Anew,chi,iter=10001,verbose=True,dtol=1e-8):
     # chiy=min(chiy,Aold.shape[0])
     # chiw=min(chiw,Aold.shape[1])
 
-    #initialize
-    u=np.eye(Anew.shape[1])
-    v=np.eye(Anew.shape[0])
+    #initialize u
+    # u=np.eye(Anew.shape[1])
+    utrunc=np.eye(Anew.shape[1],Aold.shape[1])
+    Aold2=ncon(utrunc,[0,3],utrunc,[1,4],Aold,[2,3,2,4])
+    _,uAold=np.linalg.eigh(Aold2)
+    Anew2=ncon(Anew,[2,0,2,1])
+    _,uAnew=np.linalg.eigh(Anew2)
+    u=uAnew.conj()@uAold.T
+
+    #initialize v
+    # v=np.eye(Anew.shape[0])
+    vtrunc=np.eye(Anew.shape[0],Aold.shape[0])
+    Aold3=ncon(vtrunc,[0,3],vtrunc,[1,4],Aold,[3,2,4,2]).real
+    Aold3+=Aold3.T
+    _,vAold=np.linalg.eigh(Aold3)
+    Anew3=ncon(Anew,[0,2,1,2]).real
+    Anew3+=Anew3.T
+    _,vAnew=np.linalg.eigh(Anew3)
+    v=vAnew@vAold.T
+
     norm_old=0
 
     #iterations
     for i in range(iter):
         venv=venv_(Aold,Anew,u,v)
-        if diff(venv,venv.conj())>1e-5*diff(venv,0):
-            warnings.warn('venv err')
         venv=venv.real
         v=TensorUpdateSVD(venv,1,use_mask=False)
-        if diff(v,v.conj())>1e-5*diff(v,0):
-            warnings.warn('v err')
         uenv=uenv_(Aold,Anew,u,v)
         u=TensorUpdateSVD(uenv,1,use_mask=False)
 
         if i%1000==0:
+            # if diff(venv,venv.conj())>1e-5*diff(venv,0):
+            #     warnings.warn('venv err')
+            # if diff(v,v.conj())>1e-5*diff(v,0):
+            #     warnings.warn('v err')
             norm_u=np.abs(uenv.flatten()@u.flatten())
             norm_v=np.abs(venv.flatten()@v.flatten())
             norm_new=norm_v
