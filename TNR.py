@@ -289,15 +289,15 @@ def MOq_(A0,Az):
 ####################################################
 # scaleop compress legs
 
-def g_compressed(A,gu,gr,gl,chik):
+def g_compressed(A,gu,gr,gl,chik,chiq):
     wvenv=wvenv_(A)
     ev,wv,tr=compress(wvenv,chik,return_tr=True)
     print('gu compression error:',(tr-np.sum(ev))/tr)
     wrenv=wrenv_(gr)
-    ev,wr,tr=compress(wrenv,chik,return_tr=True,do_symmetrize=True)
+    ev,wr,tr=compress(wrenv,chiq,return_tr=True,do_symmetrize=True)
     print('gr compression error:',(tr-np.sum(ev))/tr)
     wlenv=wlenv_(gl)
-    ev,wl,tr=compress(wlenv,chik,return_tr=True,do_symmetrize=True)
+    ev,wl,tr=compress(wlenv,chiq,return_tr=True,do_symmetrize=True)
     print('gl compression error:',(tr-np.sum(ev))/tr)
 
     guw=np.einsum(gu,[3,4,1,2],wv.conj(),[3,4,0])
