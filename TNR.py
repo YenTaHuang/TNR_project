@@ -64,26 +64,26 @@ def optim_Uvlvr(A,chi,iter=1001,verbose=True,dtol=1e-10):
     return B,U,vl,vr
 
 def AAU_(A,U):
-    return np.einsum(A,[2,6,8,0],A,[8,7,5,1],U,[6,7,3,4],optimize=('greedy', 2**100))
+    return ncon(A,[2,6,8,0],A,[8,7,5,1],U,[6,7,3,4])
 def vlenvhalf_(AAU,vr):
-    return np.einsum(AAU,[0,1,2,3,5,6],vr,[6,5,4],optimize=('greedy', 2**100))
+    return ncon(AAU,[0,1,2,3,5,6],vr,[6,5,4])
 def vlenv_(vlenvhalf):
-    return np.einsum(vlenvhalf,[4,5,0,1,6],vlenvhalf.conj(),[4,5,2,3,6],optimize=('greedy', 2**100))
+    return ncon(vlenvhalf,[4,5,0,1,6],vlenvhalf.conj(),[4,5,2,3,6])
 def vrenvhalf_(AAU,vl):
-    return np.einsum(AAU,[0,1,6,5,3,2],vl,[6,5,4],optimize=('greedy', 2**100))
+    return ncon(AAU,[0,1,6,5,3,2],vl,[6,5,4])
 def vrenv_(vrenvhalf):
-    return np.einsum(vrenvhalf,[4,5,0,1,6],vrenvhalf.conj(),[4,5,2,3,6],optimize=('greedy', 2**100))
+    return ncon(vrenvhalf,[4,5,0,1,6],vrenvhalf.conj(),[4,5,2,3,6])
 def Uenv_(A,vl,vr,Bhalf):
-    return np.einsum(A,[4,0,10,6],A,[10,1,5,7],vl,[4,2,8],vr,[5,3,9],Bhalf.conj(),[6,7,8,9],optimize=('greedy', 2**100))
+    return ncon(A,[4,0,10,6],A,[10,1,5,7],vl,[4,2,8],vr,[5,3,9],Bhalf.conj(),[6,7,8,9])
 def Bhalf_(A,U,vl,vr):
-    return np.einsum(A,[4,5,6,0],A,[6,7,10,1],U,[5,7,8,9],vl,[4,8,2],vr,[10,9,3],optimize=('greedy', 2**100))
+    return ncon(A,[4,5,6,0],A,[6,7,10,1],U,[5,7,8,9],vl,[4,8,2],vr,[10,9,3])
 def B_(Bhalf):
-    return np.einsum(Bhalf,[4,5,2,3],Bhalf.conj(),[4,5,0,1],optimize=('greedy', 2**100))
+    return ncon(Bhalf,[4,5,2,3],Bhalf.conj(),[4,5,0,1])
 def Adouble_(A):
-    return np.einsum(A,[2,3,6,0],A,[6,4,5,1],optimize=('greedy', 2**100))
+    return ncon(A,[2,3,6,0],A,[6,4,5,1])
 
 def Pu_half_(U,vl,vr):
-    return np.einsum(U,[1,2,6,7],vl,[0,6,4],vr,[3,7,5],optimize=('greedy', 2**100))
+    return ncon(U,[1,2,6,7],vl,[0,6,4],vr,[3,7,5])
 
 ############################################
 def optim_ylyrD(B,chi,verbose=True):
@@ -110,11 +110,11 @@ def optim_w(vl,vr,yl,yr,D,chi,iter=101,verbose=True,dtol=1e-8):
     wenv=wenv_(ring)
     _,w=compress(wenv,chiw)
 
-    Anew=np.einsum(ring,[4,5,0,2,6,7],w,[6,7,1],w.conj(),[4,5,3],optimize=('greedy', 2**100))
+    Anew=ncon(ring,[4,5,0,2,6,7],w,[6,7,1],w.conj(),[4,5,3])
 
     #evaluation
     if verbose:
-        err3=diff(ring,np.einsum(Anew,[2,7,3,6],w,[0,1,6],w.conj(),[4,5,7],optimize=('greedy', 2**100)))/diff(ring,0)
+        err3=diff(ring,ncon(Anew,[2,7,3,6],w,[0,1,6],w.conj(),[4,5,7]))/diff(ring,0)
         print('error in w optimization: %.6g'%(err3,))
 
     Anorm=np.linalg.norm(Anew)
@@ -123,35 +123,40 @@ def optim_w(vl,vr,yl,yr,D,chi,iter=101,verbose=True,dtol=1e-8):
     return w,Anew,Anorm
 
 def ring_(vl,vr,yl,yr,D):
-    return np.einsum(vl,[7,1,8],vr,[7,0,6],vl.conj(),[10,5,9],vr.conj(),[10,4,11],yl.conj()*np.sqrt(D),[8,9,3],yr.conj()*np.sqrt(D),[6,11,2],optimize=('greedy', 2**100))
+    return ncon(vl,[7,1,8],vr,[7,0,6],vl.conj(),[10,5,9],vr.conj(),[10,4,11],yl.conj()*np.sqrt(D),[8,9,3],yr.conj()*np.sqrt(D),[6,11,2])
 
 
 def wenv_(ring):
-    return np.einsum(ring,[4,5,6,7,0,1],ring.conj(),[4,5,6,7,2,3],optimize=('greedy', 2**100))
+    return ncon(ring,[4,5,6,7,0,1],ring.conj(),[4,5,6,7,2,3])
 
 ####################################################
 def fix_gauge(Aold,Anew,chi,iter=10001,verbose=True,dtol=1e-8):
     #fix gauge
-    if Anew.shape!=Aold.shape:
-        print('Anew.shape!=Aold.shape, skip fix_gauge')
-        u,v=None,None
-        return Anew,u,v
+    # if Anew.shape!=Aold.shape:
+    #     print('Anew.shape!=Aold.shape, skip fix_gauge')
+    #     u,v=None,None
+    #     return Anew,u,v
 
-    chiw,chiy,chiu,chiv=chi['w'],chi['y'],chi['u'],chi['v']
-    chiy=min(chiy,Aold.shape[0])
-    chiw=min(chiw,Aold.shape[1])
+    # chiw,chiy,chiu,chiv=chi['w'],chi['y'],chi['u'],chi['v']
+    # chiy=min(chiy,Aold.shape[0])
+    # chiw=min(chiw,Aold.shape[1])
 
     #initialize
-    u=np.eye(chiw)
-    v=np.eye(chiy)
+    u=np.eye(Anew.shape[1])
+    v=np.eye(Anew.shape[0])
     norm_old=0
 
     #iterations
     for i in range(iter):
-        uenv=uenv_(Aold,Anew,u,v)
-        u=TensorUpdateSVD(uenv,1)
         venv=venv_(Aold,Anew,u,v)
-        v=TensorUpdateSVD(venv,1)
+        if diff(venv,venv.conj())>1e-5*diff(venv,0):
+            warnings.warn('venv err')
+        venv=venv.real
+        v=TensorUpdateSVD(venv,1,use_mask=False)
+        if diff(v,v.conj())>1e-5*diff(v,0):
+            warnings.warn('v err')
+        uenv=uenv_(Aold,Anew,u,v)
+        u=TensorUpdateSVD(uenv,1,use_mask=False)
 
         if i%1000==0:
             norm_u=np.abs(uenv.flatten()@u.flatten())
@@ -163,35 +168,41 @@ def fix_gauge(Aold,Anew,chi,iter=10001,verbose=True,dtol=1e-8):
                 break
             norm_old=norm_new
 
-    Anew=np.einsum(Anew,[4,5,6,7],u,[5,1],u.conj(),[7,3],v,[6,2],v.conj(),[4,0])
+    Anew=ncon(Anew,[4,5,6,7],u,[5,1],u.conj(),[7,3],v,[6,2],v.conj(),[4,0])
 
     #evaluation
     if verbose:
-        Adiff=diff(Anew,Aold)
+        As=np.min((Aold.shape,Anew.shape),axis=0)
+        Adiff=diff(Anew[:As[0],:As[1],:As[0],:As[1]],Aold[:As[0],:As[1],:As[0],:As[1]])
         print('Adiff %.6g'%(Adiff,)) 
     return Anew,u,v
 
 def uenv_(Aold,Anew,u,v):
-    return np.einsum(Aold.conj(),[5,1,3,4],Anew,[6,0,2,7],u.conj(),[7,4],v,[2,3],v.conj(),[6,5],optimize=('greedy', 2**100))
+    utrunc=np.eye(Anew.shape[1],Aold.shape[1])
+    vtrunc=np.eye(Anew.shape[0],Aold.shape[0])
+    return ncon(utrunc,[1,8],Aold.conj(),[5,8,3,4],Anew,[6,0,2,7],u.conj()@utrunc,[7,4],v@vtrunc,[2,3],v.conj()@vtrunc,[6,5])
+
 def venv_(Aold,Anew,u,v):
-    return np.einsum(Aold.conj(),[5,1,3,4],Anew,[6,0,2,7],u,[0,1],u.conj(),[7,4],v.conj(),[6,5],optimize=('greedy', 2**100))
+    utrunc=np.eye(Anew.shape[1],Aold.shape[1])
+    vtrunc=np.eye(Anew.shape[0],Aold.shape[0])
+    return ncon(vtrunc,[3,8],Aold.conj(),[5,1,8,4],Anew,[6,0,2,7],u@utrunc,[0,1],u.conj()@utrunc,[7,4],v.conj()@vtrunc,[6,5])
 
 ####################################################
 #scaling op
 
 def gl_(vl):
-    return np.einsum(vl,[1,4,3],vl.conj(),[0,4,2],optimize=('greedy', 2**100))
+    return ncon(vl,[1,4,3],vl.conj(),[0,4,2])
 def gr_(vr):
-    return np.einsum(vr,[1,4,3],vr.conj(),[0,4,2],optimize=('greedy', 2**100))
+    return ncon(vr,[1,4,3],vr.conj(),[0,4,2])
 def gu_(A,U,vl,vr):
     return Bhalf_(A,U,vl,vr)
 def gnw_(vl,vr,yr,D,w):
-    return np.einsum(vl.conj(),[4,6,1],vr.conj(),[4,5,7],yr.conj()*np.sqrt(D),[0,7,2],w,[5,6,3],optimize=('greedy', 2**100))
+    return ncon(vl.conj(),[4,6,1],vr.conj(),[4,5,7],yr.conj()*np.sqrt(D),[0,7,2],w,[5,6,3])
 def gne_(vl,vr,yl,D,w):
-    return np.einsum(vl.conj(),[4,6,7],vr.conj(),[4,5,1],yl.conj()*np.sqrt(D),[0,7,2],w,[5,6,3],optimize=('greedy', 2**100))
+    return ncon(vl.conj(),[4,6,7],vr.conj(),[4,5,1],yl.conj()*np.sqrt(D),[0,7,2],w,[5,6,3])
 
 def rg_(M,gl,gr,gu,gnw,gne):
-    return np.einsum(M,[8,9,10,11,12,13,14,15],gl,[11,13,19,21],gr,[10,12,18,20],gu,[14,15,22,23],gu.conj(),[8,9,16,17],gnw,[20,22,4,6],gne,[21,23,5,7],gnw.conj(),[18,16,2,0],gne.conj(),[19,17,3,1],optimize=('greedy', 2**100))
+    return ncon(M,[8,9,10,11,12,13,14,15],gl,[11,13,19,21],gr,[10,12,18,20],gu,[14,15,22,23],gu.conj(),[8,9,16,17],gnw,[20,22,4,6],gne,[21,23,5,7],gnw.conj(),[18,16,2,0],gne.conj(),[19,17,3,1])
 
 def gauge_(gnw,gne,u,v):
     '''
@@ -200,8 +211,8 @@ def gauge_(gnw,gne,u,v):
     if type(u)==type(None):
         return gnw,gne
     else:
-        gnw_gauged=np.einsum(gnw@u,[0,1,4,3],v.conj(),[4,2])
-        gne_gauged=np.einsum(gne@u,[0,1,4,3],v,[4,2])
+        gnw_gauged=ncon(gnw@u,[0,1,4,3],v.conj(),[4,2])
+        gne_gauged=ncon(gne@u,[0,1,4,3],v,[4,2])
         return gnw_gauged,gne_gauged
 
 def Mscaled_(M,A,U,vl,vr,yl,yr,D,w,u,v):
@@ -250,14 +261,14 @@ def eval_op(MO0,tensor_list):
 
 
 def MA_(A0):
-    return np.einsum(A0,[2,9,8,0],A0,[8,10,3,1],A0,[4,6,11,9],A0,[11,7,5,10])
+    return ncon(A0,[2,9,8,0],A0,[8,10,3,1],A0,[4,6,11,9],A0,[11,7,5,10])
 def MO_(A0,op):
-    return np.einsum(A0,[2,9,8,0],A0,[8,10,3,1],A0,[4,6,11,9],A0@op,[11,7,5,10])
+    return ncon(A0,[2,9,8,0],A0,[8,10,3,1],A0,[4,6,11,9],A0@op,[11,7,5,10])
 def Mtrace_(MA):
-    return np.einsum(MA,[0,1,2,2,3,3,0,1])
+    return ncon(MA,[0,1,2,2,3,3,0,1])
 
 def MOq_(A0,Az):
-    return 0.5*(np.einsum(A0,[2,9,8,0],A0,[8,10,3,1],A0,[4,6,11,9],Az,[11,7,5,10])+np.einsum(A0,[2,9,8,0],Az,[8,10,3,1],A0,[4,6,11,9],A0,[11,7,5,10]))
+    return 0.5*(ncon(A0,[2,9,8,0],A0,[8,10,3,1],A0,[4,6,11,9],Az,[11,7,5,10])+ncon(A0,[2,9,8,0],Az,[8,10,3,1],A0,[4,6,11,9],A0,[11,7,5,10]))
 
 ####################################################
 #initialize A
@@ -280,7 +291,7 @@ def Asplit(Ainit,chi,verbose=True,op=None):
     if diff(vr2*w2,(vr2*w2).transpose(1,0,2).conj())>1e-5*diff(vr2*w2,0):
         warnings.warn('Asplit vr2 err')
 
-    Aout=np.einsum(vr2*np.sqrt(w2),[4,5,0],v,[5,7,1],vl2*np.sqrt(w2),[6,7,2],v.conj(),[4,6,3])
+    Aout=ncon(vr2*np.sqrt(w2),[4,5,0],v,[5,7,1],vl2*np.sqrt(w2),[6,7,2],v.conj(),[4,6,3])
     Anorm=np.linalg.norm(Aout)
     Aout/=Anorm
 
@@ -296,7 +307,7 @@ def Asplit(Ainit,chi,verbose=True,op=None):
     if type(op)==type(None):
         return Aout
     else:
-        Azout=0.5*(np.einsum(vr2*np.sqrt(w2),[4,5,0],v,[5,7,1],op@vl2*np.sqrt(w2),[6,7,2],v.conj(),[4,6,3])+np.einsum(vr2*np.sqrt(w2),[4,5,0],v,[5,7,1],vl2*np.sqrt(w2),[6,7,2],op@v.conj(),[4,6,3]))
+        Azout=0.5*(ncon(vr2*np.sqrt(w2),[4,5,0],v,[5,7,1],op@vl2*np.sqrt(w2),[6,7,2],v.conj(),[4,6,3])+ncon(vr2*np.sqrt(w2),[4,5,0],v,[5,7,1],vl2*np.sqrt(w2),[6,7,2],op@v.conj(),[4,6,3]))
         Azout/=Anorm
         return Aout, Azout
 
@@ -324,9 +335,9 @@ def coarsen(A,chi,Az=None):
         return Acoarse, Azcoarse
 
 def waenv_(A):
-    return np.einsum(A.conj(),[0,8,6,4],A.conj(),[2,5,7,8],A,[1,9,6,4],A,[3,5,7,9])
+    return ncon(A.conj(),[0,8,6,4],A.conj(),[2,5,7,8],A,[1,9,6,4],A,[3,5,7,9])
 def Acoarse_(A1,A2,wl,wr):
-    return np.einsum(A1,[4,8,6,3],A2,[5,1,7,8],wl,[6,7,2],wr,[4,5,0])
+    return ncon(A1,[4,8,6,3],A2,[5,1,7,8],wl,[6,7,2],wr,[4,5,0])
 
 # def coarsen(A,chi):
 #     chiy=chi['y']
@@ -334,8 +345,8 @@ def Acoarse_(A1,A2,wl,wr):
 #     ev,wa=compress(waenv,chiy,do_symmetrize=True)
     
 #     Acoarse=Acoarse_(A,wa)
-#     tr1=np.einsum(A,[0,1,0,3],A,[2,3,2,1])
-#     tr2=np.einsum(Acoarse,[0,1,0,1])
+#     tr1=ncon(A,[0,1,0,3],A,[2,3,2,1])
+#     tr2=ncon(Acoarse,[0,1,0,1])
 #     err=(tr1-tr2)/tr1
 #     print('Coarsen truncation error: %.6g'%(err.real,))
 #     Acoarse/=np.linalg.norm(Acoarse)
@@ -344,9 +355,9 @@ def Acoarse_(A1,A2,wl,wr):
 #     return Acoarse
 
 # def waenv_(A):
-#     return np.einsum(A.conj(),[0,8,6,4],A.conj(),[1,5,7,8],A,[2,9,6,4],A,[3,5,7,9])
+#     return ncon(A.conj(),[0,8,6,4],A.conj(),[1,5,7,8],A,[2,9,6,4],A,[3,5,7,9])
 # def Acoarse_(A,wa):
-#     return np.einsum(A,[4,8,6,3],A,[5,1,7,8],wa,[6,7,2],wa.conj(),[4,5,0])
+#     return ncon(A,[4,8,6,3],A,[5,1,7,8],wa,[6,7,2],wa.conj(),[4,5,0])
 
 ####################################################
 #utils
@@ -367,7 +378,7 @@ def h_cut(A,chimax,dtol=1e-10,return_tr=False):
     vr=vt.T.reshape(As[1],As[3],-1)
     vl,vr=symmetrize(vl,w,vr)
 
-    mask=(w[:chimax]>-dtol*tr)
+    mask=(w[:chimax]>dtol*tr)
     w=w[:chimax][mask]
     vl=vl[:,:,:chimax][:,:,mask]
     vr=vr[:,:,:chimax][:,:,mask]
@@ -394,7 +405,7 @@ def compress(env,chimax,dtol=1e-10,return_tr=False,do_symmetrize=False):
         vl,vr=symmetrize(vl,w,vr)
         v=rs2(vl,2)
 
-    mask=(w[:chimax]>-dtol*tr)
+    mask=(w[:chimax]>dtol*tr)
     # if any(1-mask):
     #     print('compress: w to be truncated:',w)
     w=w[:chimax][mask]
@@ -425,7 +436,7 @@ def symmetrize(vl,w,vr):
 
     return vl,vr
 
-def TensorUpdateSVD(env,leftnum,dtol=1e-10):
+def TensorUpdateSVD(env,leftnum,dtol=1e-10,use_mask=True):
     '''
     input: env, dims[N0,N1,...,N_leftnum-1,M_0,M-1,...]
     returns: isometry 'out' with dim same as env, which maximizes out.env
@@ -434,7 +445,7 @@ def TensorUpdateSVD(env,leftnum,dtol=1e-10):
     env[np.abs(env)<dtol*np.linalg.norm(env)]=0
     U,S,Vh = np.linalg.svd(rs2(env,leftnum),full_matrices=False)
     tr=np.sum(S)
-    mask=(S>dtol*tr)
+    mask=(S>dtol*tr) if use_mask else (S>-dtol*tr)
     # if any(1-mask):
     #     print('TensorSVD: S to be truncated:',S)
     out=(U[:,mask]@Vh[mask,:]).conj().reshape(envs)
@@ -456,6 +467,9 @@ def KP(*arg):
         return np.kron(*arg)
     else:
         return np.kron(arg[0],KP(*arg[1:]))
+
+def ncon(*arg):
+    return np.einsum(*arg,optimize=('greedy',2**100))
 
 def chop(x,tol=1e-10):
     return x.real*(abs(x.real)>tol)+1j*x.imag*(abs(x.imag)>tol)
